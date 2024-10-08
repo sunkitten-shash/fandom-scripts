@@ -1,1 +1,1 @@
-# fandom-scripts
+# Fandom scripts
