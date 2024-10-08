@@ -34,7 +34,10 @@ async function addPodfics() {
         }
 
         let jumpParagraph = $('p.jump').first()[0];
-        jumpParagraph.innerHTML = jumpParagraph.innerHTML.replace(/ and <a href=".*">other works inspired by this one<\/a>/, '');
+        if (jumpParagraph.innerText.includes('more notes'))
+            jumpParagraph.innerHTML = jumpParagraph.innerHTML.replace(/ and <a href=".*">other works inspired by this one<\/a>/, '');
+        else
+            jumpParagraph.remove();
 
         const topNotes = $("div.notes").first();
         topNotes.append('<br />');
