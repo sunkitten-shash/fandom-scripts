@@ -5,6 +5,8 @@
 // @author       sunkitten_shash
 // @include      http*://archiveofourown.org/*works*
 // @require      http://code.jquery.com/jquery-3.5.1.min.js
+// @updateURL    https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/force-see-podfic.pub.user.js
+// @downloadURL  https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/force-see-podfic.pub.user.js
 // @grant        none
 // ==/UserScript==
 
