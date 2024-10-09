@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Force See Podfic
-// @version      1.0
+// @version      1.1
 // @description  Shows all inspired works at top of page, linked or not
 // @author       sunkitten_shash
 // @include      http*://archiveofourown.org/*works*
@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 async function addPodfics() {
-    const workTitle = $.find('h2.title.heading')[0].innerText;
+    const workTitle = $.find('h2.title.heading')[0].innerText.trim();
 
     const authorLink = $.find('a[rel="author"]');
     const relatedWorksLink = authorLink[0].href.replace(/\/pseuds\/.*/, '') + '/related_works';
