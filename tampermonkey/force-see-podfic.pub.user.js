@@ -34,16 +34,18 @@ async function addPodfics() {
         }
 
         let jumpParagraph = $('p.jump').first()[0];
-        const prevElement = jumpParagraph.previousElementSibling;
-        // if there are no other notes, remove the "Notes" section entirely; otherwise, only remove the verbiage about inspired works.
-        if ($(prevElement).is('blockquote')) {
-            if (jumpParagraph.innerText.includes('more notes'))
-                jumpParagraph.innerHTML = jumpParagraph.innerHTML.replace(/ and <a href=".*">other works inspired by this one<\/a>/, '');
-            else
+        if (jumpParagraph) {
+            const prevElement = jumpParagraph.previousElementSibling;
+            // if there are no other notes, remove the "Notes" section entirely; otherwise, only remove the verbiage about inspired works
+            if ($(prevElement).is('blockquote')) {
+                if (jumpParagraph.innerText.includes('more notes'))
+                    jumpParagraph.innerHTML = jumpParagraph.innerHTML.replace(/ and <a href=".*">other works inspired by this one<\/a>/, '');
+                else
+                    jumpParagraph.remove();
+            } else {
                 jumpParagraph.remove();
-        } else {
-            jumpParagraph.remove();
-            prevElement.remove();
+                prevElement.remove();
+            }
         }
 
 
