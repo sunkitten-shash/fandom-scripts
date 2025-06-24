@@ -27,7 +27,7 @@ const bookmark_form_url =
 
 // these are just sample presets
 const defaultPresets = {
-  "To Read": { tags: ["To Read"], private: "true" },
+  "To Read": { tags: ["To Read"], private: true },
   Wordcount: {},
 };
 
