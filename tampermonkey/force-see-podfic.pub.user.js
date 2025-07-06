@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Force See Podfic
-// @version      1.2
+// @version      1.3
 // @description  Shows all inspired works at top of page, linked or not
 // @author       sunkitten_shash
 // @include      http*://archiveofourown.org/*works*
@@ -42,6 +42,7 @@ async function addPodfics() {
     }
 
     let jumpParagraph = $("p.jump").first()[0];
+    console.log({ jumpParagraph });
     if (jumpParagraph) {
       const prevElement = jumpParagraph.previousElementSibling;
       // if there are no other notes, remove the "Notes" section entirely; otherwise, only remove the verbiage about inspired works
@@ -58,12 +59,13 @@ async function addPodfics() {
       }
     }
 
-    const topNotes = $("div.notes").first();
-    topNotes.append("<br />");
+    let topSection = $("div.notes").first();
+    if (topSection.length === 0) topSection = $("div.summary").first();
+    topSection.append("<br />");
     const wrapperDiv = $("<div>");
     $(wrapperDiv).addClass("children");
     $(wrapperDiv).addClass("module");
-    topNotes.append(wrapperDiv);
+    topSection.append(wrapperDiv);
     wrapperDiv.append('<h3 class="heading">Works inspired by this one:</h3>');
     const wrapperList = $("<ul>");
     wrapperList.append(
