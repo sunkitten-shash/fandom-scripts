@@ -14,6 +14,9 @@
 // TODO: adding specific elements to notes? templates?
 // TODO: picking a specific pseud
 // TODO: not re-adding tags
+// TODO: tag adding w/ rules
+
+const nonPodficTags = ["Podfic & Podficced Works", "Podfic Available"];
 
 const num_separators = /[\.,]/;
 
@@ -106,6 +109,12 @@ function add_tag(tag, selector) {
   tag_input.dispatchEvent(new KeyboardEvent("keydown", { key: "," }));
 }
 
+function add_bookmark_tag(tag) {
+  // first check that there aren't existing bookmark tags that are the same
+
+  add_tag.call(this, tag, "[id=bookmark_tag_string_autocomplete]");
+}
+
 // the other tag functionality doesn't seemingly work for collections
 function add_collection(tag) {
   let tag_input = $(this).find("[id=bookmark_collection_names_autocomplete]");
@@ -132,13 +141,13 @@ function autopopulate_wordcount() {
     const freeform_tags = $("#main dd.freeform ul.commas");
     const podfic_tag = $(freeform_tags).find("li:contains('Podfic')");
     // TODO: is that needed?
-    let podficced_work_tag = $(freeform_tags).find(
-      "li:contains('Podfic & Podficced Works')"
-    );
-    if (!podficced_work_tag.length)
+    let podficced_work_tag = null;
+    for (nonPodficTag of nonPodficTags) {
       podficced_work_tag = $(freeform_tags).find(
-        "li:contains('Podfic Available')"
+        `li:contains('${nonPodficTag}')`
       );
+      if (podficced_work_tag.length) break;
+    }
     has_podfic_tag = podfic_tag.length && !podficced_work_tag.length;
 
     wordcount = $("#main div.wrapper dd.stats dd.words");
@@ -150,6 +159,7 @@ function autopopulate_wordcount() {
     wordcount = $("#main div.wrapper dd.stats dd").first();
   } else if (href.match(bookmark_form_url)) {
     // Dedicated bookmark edit page, wordcount not accessible
+    // TODO: I don't believe this
     console.log("Dedicated bookmark edit page");
     return;
   } else {
@@ -157,6 +167,7 @@ function autopopulate_wordcount() {
     console.log("other page");
 
     let bookmark_article = $(this).closest("li.bookmark[role=article]");
+    // TODO: consistent code for these
     let has_podfic_tag = $(bookmark_article).find(
       "ul.tags > li.freeforms:contains('Podfic')"
     );
@@ -308,6 +319,26 @@ function set_context(j_node) {
   autopopulate_presets.call(j_node);
 }
 
+function getConditionalTagHTML(conditionalTag, index, presetName) {
+  return `<div id="conditional-tags-preset-${presetName}-${index}">
+        <label for="if-tags-preset-${presetName}-${index}">If any of these tags are present:</label>
+        <input type="text" name="if-tags-preset-${presetName}-${index}" id="if-tags-preset-${presetName}-${index}" value="${(
+    conditionalTag.if ?? []
+  ).join(",")}" />
+        <label for="then-tags-preset-${presetName}-${index}">Then add these tags:</label>
+        <input type="text" name="then-tags-preset-${presetName}-${index}" id="then-tags-preset-${presetName}-${index}" value="${(
+    conditionalTag.then ?? []
+  ).join(",")}" />
+        <label for="else-tags-preset-${presetName}-${index}">Else add these tags:</label>
+        <input type="text" name="else-tags-preset-${presetName}-${index}" id="else-tags-preset-${presetName}-${index}" value="${(
+    conditionalTag.else ?? []
+  ).join(",")}" />
+        <br />
+        <button id="remove-conditional-tag-preset-${presetName}-${index}">Remove</button>
+        <br />
+        </div>`;
+}
+
 function getPresetHTML(presetName, presets) {
   const header = `
       <input type="checkbox" name="check-preset-${presetName}" id="check-preset-${presetName}" />
@@ -323,6 +354,20 @@ function getPresetHTML(presetName, presets) {
       presets[presetName].tags ?? []
     ).join(",")}" />
       <br />
+      <br />
+      
+      <details>
+      <summary><strong>Conditional Tags</strong></summary>
+      ${(presets[presetName].conditionalTags ?? []).map(
+        (conditionalTag, index) => {
+          return getConditionalTagHTML(conditionalTag, index, presetName);
+        }
+      )}
+      <button id="add-conditional-tag-preset-${presetName}">Add conditional tags</button>
+      </details>
+      <br />
+      <br />
+
       <input type="checkbox" name="private-preset-${presetName}" id="private-preset-${presetName}" />
       <label for="private-preset-${presetName}">Make bookmark private</label>
       <input type="checkbox" name="rec-preset-${presetName}" id="rec-preset-${presetName}" />
@@ -375,6 +420,7 @@ function getPresetHTML(presetName, presets) {
         )
         .join("")}
     </fieldset>
+
     <fieldset id="categories-preset-${presetName}">
       <legend>Categories</legend>
       ${["F/F", "F/M", "Gen", "M/M", "Multi", "Other"]
@@ -386,6 +432,7 @@ function getPresetHTML(presetName, presets) {
         )
         .join("")}
     </fieldset>
+
     </details>
     </div>`;
   }
@@ -558,6 +605,58 @@ GM.registerMenuCommand(
       await GM.setValue("bookmarkPresets", JSON.stringify(presets));
     });
 
+    $("[id^=add-conditional-tag-preset]").click(async (event) => {
+      const presetName = event.target.id.split("-").pop();
+      console.log({ presetName });
+      existingConditionals = presets[presetName]?.conditionalTags;
+      console.log({ existingConditionals });
+      let newConditionals = [
+        {
+          if: [],
+          then: [],
+          else: [],
+        },
+      ];
+      if (!!existingConditionals) {
+        newConditionals = [...existingConditionals, ...newConditionals];
+      }
+      presets = {
+        ...presets,
+        [presetName]: {
+          ...presets[presetName],
+          conditionalTags: newConditionals,
+        },
+      };
+      const newConditionalTagHTML = getConditionalTagHTML(
+        newConditionals[newConditionals.length - 1],
+        newConditionals.length - 1,
+        presetName
+      );
+      $($(event.target).parent()).prepend(newConditionalTagHTML);
+      await GM.setValue("bookmarkPresets", JSON.stringify(presets));
+    });
+
+    $("[id^=remove-conditional-tag-preset]").click(async (event) => {
+      const elements = event.target.id.split("-");
+      const index = elements.pop();
+      const presetName = elements.pop();
+      const existingConditionals = presets[presetName]?.conditionalTags;
+      if (!existingConditionals) return;
+      else {
+        existingConditionals.splice(index, 1);
+        const parent = $(event.target).parent();
+        $(parent).remove();
+        presets = {
+          ...presets,
+          [presetName]: {
+            ...presets[presetName],
+            conditionalTags: existingConditionals,
+          },
+        };
+        await GM.setValue("bookmarkPresets", JSON.stringify(presets));
+      }
+    });
+
     $("[id^=remove-preset]").click(async (event) => {
       const presetName = event.target.id.split("-").pop();
       delete presets[presetName];
@@ -584,12 +683,28 @@ function getUpdatedPresets() {
     }
     let tags = $($(wrapper).find("input[id^=tags-preset]")[0]).val();
     tags = tags.split(",").map((tag) => tag.trim());
+
+    let conditionalTags = [];
+    $("div[id^=conditional-tags-preset]").each((_index, wrapper) => {
+      let ifTags = $($(wrapper).find("input[id^=if-tags-preset]")[0]).val();
+      ifTags = ifTags.split(",").map((tag) => tag.trim());
+
+      let thenTags = $($(wrapper).find("input[id^=then-tags-preset]")[0]).val();
+      thenTags = thenTags.split(",").map((tag) => tag.trim());
+
+      let elseTags = $($(wrapper).find("input[id^=else-tags-preset]")[0]).val();
+      elseTags = elseTags.split(",").map((tag) => tag.trim());
+
+      conditionalTags.push({ if: ifTags, then: thenTags, else: elseTags });
+    });
+
     const private = $(
       $(wrapper).find("input[type=checkbox][id^=private-preset]")[0]
     ).is(":checked");
     const rec = $(
       $(wrapper).find("input[type=checkbox][id^=rec-preset]")[0]
     ).is(":checked");
+
     let collections = $(
       $(wrapper).find("input[id^=collections-preset]")[0]
     ).val();
@@ -615,6 +730,7 @@ function getUpdatedPresets() {
 
     presets[name] = {
       tags,
+      conditionalTags,
       private,
       rec,
       collections,
