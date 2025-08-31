@@ -5,6 +5,8 @@
 // @author       sunkitten_shash
 // @include      https://archiveofourown.org/*
 // @require      http://code.jquery.com/jquery-3.6.0.min.js
+// @updateURL    https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/bookmark-presets.pub.user.js
+// @downloadURL  https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/bookmark-presets.pub.user.js
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.registerMenuCommand
