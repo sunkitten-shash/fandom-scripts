@@ -13,8 +13,6 @@
 // TODO: configurable buckets & styling for the wordcount?
 // TODO: adding specific elements to notes? templates?
 // TODO: picking a specific pseud
-// TODO: not re-adding tags
-// TODO: and/and not conditional tags
 // TODO: pull notes & rec from bookmarker
 
 const nonPodficTags = ["Podfic & Podficced Works", "Podfic Available"];
@@ -102,20 +100,21 @@ function check_for_existing_bookmark_tag(tag) {
   const existing_bookmark_tags = $(this).find("input[id=bookmark_tag_string_autocomplete]")?.parent().parent().find("li.added.tag");
   existing_bookmark_tags.each((_index, element) => {
     const text = element.innerText.split("×")[0].trim();
-    console.log({ text });
     if (text === tag) {
       tag_exists = true;
       return false;
     }
   })
 
-  console.log({ tag_exists})
   return tag_exists;
 }
 
 function add_tag(tag, selector) {
   let tag_input = $(this).find(selector);
-  if (!tag_input[0]) return;
+  if (!tag_input[0]) {
+    console.log("Can't find tag input field, returning");
+    return;
+  }
   tag_input = tag_input[0]; // get actual DOM node
 
   // adding tag spoofing from: https://github.com/LazyCats-dev/ao3-podfic-posting-helper/blob/main/src/inject.js
@@ -285,20 +284,46 @@ async function autopopulate_presets() {
       console.log({ conditionalTags });
       for (const conditionalTag of conditionalTags) {
         const ifTags = conditionalTag.if;
-        let tag_present = false;
+        let tags_present = false;
         if (ifTags?.length) {
           for (const ifTag of ifTags) {
-            tag_present = check_for_work_tag.call(this, ifTag);
+            tags_present = check_for_work_tag.call(this, ifTag);
 
-            if (tag_present) {
-              const thenTags = conditionalTag.then ?? [];
-              thenTags.forEach((tag) => add_bookmark_tag.call(this, tag));
+            if (tags_present) {
               break;
             }
           }
         }
 
-        if (!tag_present) {
+        const andTags = conditionalTag.and;
+        const andSelect = conditionalTag.andSelect;
+        if (tags_present && andTags?.length) {
+          let and_tag_present = false;
+          for (const andTag of andTags) {
+            and_tag_present = check_for_work_tag.call(this, andTag);
+            console.log(`${andTag} ${and_tag_present ? 'is' : 'is not'} present w/ condition ${andSelect}`);
+
+            // if we want both sets of tags to be present, short-circuit if any and tag is found. otherwise continue
+            if (andSelect === "AND" && and_tag_present) {
+              tags_present = true;
+              break;
+            // if we want them to not be present, set the whole thing false immediately
+            } else if (andSelect === "AND_NOT" && and_tag_present) {
+              tags_present = false;
+              break;
+            }
+          }
+
+          // if and tags were never found, set tags_present to false
+          if (!and_tag_present && andSelect === "AND") {
+            tags_present = false;
+          }
+        }
+
+        if (tags_present) {
+          const thenTags = conditionalTag.then ?? [];
+          thenTags.forEach((tag) => add_bookmark_tag.call(this, tag));
+        } else {
           const elseTags = conditionalTag.else ?? [];
           elseTags.forEach((tag) => add_bookmark_tag.call(this, tag));
         }
@@ -397,6 +422,13 @@ function getConditionalTagHTML(conditionalTag, index, presetName) {
         <input type="text" name="if-tags-preset-${presetName}-${index}" id="if-tags-preset-${presetName}-${index}" value="${(
     conditionalTag.if ?? []
   ).join(",")}" />
+        <select id="select-and-tags-preset-${presetName}-${index}" value="${
+          conditionalTag.andSelect ?? "AND"
+        }">
+          <option value="AND">AND</option>
+          <option value="AND_NOT">AND NOT</option>
+        </select>
+        <input type="text" name="and-tags-preset-${presetName}-${index}" id="and-tags-preset-${presetName}-${index}" value="${(conditionalTag.and ?? []).join(",")}" />
         <label for="then-tags-preset-${presetName}-${index}">Then add these tags:</label>
         <input type="text" name="then-tags-preset-${presetName}-${index}" id="then-tags-preset-${presetName}-${index}" value="${(
     conditionalTag.then ?? []
@@ -775,6 +807,15 @@ function getUpdatedPresets() {
         let ifTags = $($(wrapper).find("input[id^=if-tags-preset]")[0]).val();
         ifTags = ifTags.split(",").map((tag) => tag.trim());
 
+        let andSelect = $(
+          $(wrapper).find("select[id^=select-and-tags-preset]")[0]
+        ).val();
+
+        let andTags = $(
+          $(wrapper).find("input[id^=and-tags-preset]")[0]
+        ).val();
+        andTags = andTags.split(",").map((tag) => tag.trim());
+
         let thenTags = $(
           $(wrapper).find("input[id^=then-tags-preset]")[0]
         ).val();
@@ -785,7 +826,7 @@ function getUpdatedPresets() {
         ).val();
         elseTags = elseTags.split(",").map((tag) => tag.trim());
 
-        conditionalTags.push({ if: ifTags, then: thenTags, else: elseTags });
+        conditionalTags.push({ if: ifTags, andSelect, and: andTags, then: thenTags, else: elseTags });
       });
 
     const onUpdate = $(
