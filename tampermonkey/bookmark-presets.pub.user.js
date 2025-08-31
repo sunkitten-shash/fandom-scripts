@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         AO3 Automatic Bookmark Options
-// @version      1.0
+// @version      1.4
 // @description  Automatically add preset options to AO3 bookmarks
 // @author       sunkitten_shash
 // @include      https://archiveofourown.org/*
