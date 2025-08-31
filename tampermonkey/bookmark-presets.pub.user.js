@@ -97,6 +97,22 @@ const css = `
         }
     }`;
 
+function check_for_existing_bookmark_tag(tag) {
+  let tag_exists = false;
+  const existing_bookmark_tags = $(this).find("input[id=bookmark_tag_string_autocomplete]")?.parent().parent().find("li.added.tag");
+  existing_bookmark_tags.each((_index, element) => {
+    const text = element.innerText.split("×")[0].trim();
+    console.log({ text });
+    if (text === tag) {
+      tag_exists = true;
+      return false;
+    }
+  })
+
+  console.log({ tag_exists})
+  return tag_exists;
+}
+
 function add_tag(tag, selector) {
   let tag_input = $(this).find(selector);
   if (!tag_input[0]) return;
@@ -112,6 +128,8 @@ function add_tag(tag, selector) {
 }
 
 function add_bookmark_tag(tag) {
+  if (check_for_existing_bookmark_tag.call(this, tag)) return;
+
   add_tag.call(this, tag, "input[id=bookmark_tag_string_autocomplete]");
 }
 
@@ -251,6 +269,9 @@ async function autopopulate_presets() {
       continue;
     }
 
+    const onUpdate = presets[key]?.onUpdate;
+    const is_updating_bookmark = $(this).find('p.submit input[type="submit"]').val() === "Update";
+    if (!onUpdate && is_updating_bookmark) continue;
     const tags = preset?.tags;
 
     if (tags?.length) {
@@ -419,6 +440,9 @@ function getPresetHTML(presetName, presets) {
       <br />
       <br />
 
+      <input type="checkbox" name="on-update-preset-${presetName}" id="on-update-preset-${presetName}" />
+      <label for="on-update-preset-${presetName}">Apply on bookmark update</label>
+      <br />
       <input type="checkbox" name="private-preset-${presetName}" id="private-preset-${presetName}" />
       <label for="private-preset-${presetName}">Make bookmark private</label>
       <input type="checkbox" name="rec-preset-${presetName}" id="rec-preset-${presetName}" />
@@ -511,6 +535,15 @@ async function populateSettingsMenuValues() {
   for (let i = 0; i < presetsCheckboxes.length; i++) {
     const label = presetsCheckboxes[i].labels[0].innerText;
     $(presetsCheckboxes[i]).prop("checked", selectedPresets.includes(label));
+  }
+
+  const updateCheckboxes = $(
+    `#bookmark-options-settings input[type=checkbox][id^="on-update-preset"]`
+  );
+  for (let i = 0; i < updateCheckboxes.length; i++) {
+    const presetName = updateCheckboxes[i].id.split("-").pop();
+    const updateValue = presets[presetName].onUpdate;
+    if (updateValue) $(updateCheckboxes[i]).prop("checked", true);
   }
 
   const privateCheckboxes = $(
@@ -755,6 +788,9 @@ function getUpdatedPresets() {
         conditionalTags.push({ if: ifTags, then: thenTags, else: elseTags });
       });
 
+    const onUpdate = $(
+      $(wrapper).find("input[type=checkbox][id^=on-update-preset]")[0]
+    ).is(":checked");
     const private = $(
       $(wrapper).find("input[type=checkbox][id^=private-preset]")[0]
     ).is(":checked");
@@ -788,6 +824,7 @@ function getUpdatedPresets() {
     presets[name] = {
       tags,
       conditionalTags,
+      onUpdate,
       private,
       rec,
       collections,
