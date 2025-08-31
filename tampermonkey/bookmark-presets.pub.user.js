@@ -14,7 +14,8 @@
 // TODO: adding specific elements to notes? templates?
 // TODO: picking a specific pseud
 // TODO: not re-adding tags
-// TODO: tag adding w/ rules
+// TODO: and/and not conditional tags
+// TODO: pull notes & rec from bookmarker
 
 const nonPodficTags = ["Podfic & Podficced Works", "Podfic Available"];
 
@@ -35,7 +36,7 @@ const defaultPresets = {
 };
 
 // change these buckets & names as desired
-const wordcount_tags = {
+const wordcount_tag_buckets = {
   "0-99": "Wordcount: 0-100",
   "100-999": "Wordcount: 100-1k",
   "1000-4999": "Wordcount: 1k-5k",
@@ -98,6 +99,7 @@ const css = `
 
 function add_tag(tag, selector) {
   let tag_input = $(this).find(selector);
+  if (!tag_input[0]) return;
   tag_input = tag_input[0]; // get actual DOM node
 
   // adding tag spoofing from: https://github.com/LazyCats-dev/ao3-podfic-posting-helper/blob/main/src/inject.js
@@ -110,18 +112,51 @@ function add_tag(tag, selector) {
 }
 
 function add_bookmark_tag(tag) {
-  // first check that there aren't existing bookmark tags that are the same
-
-  add_tag.call(this, tag, "[id=bookmark_tag_string_autocomplete]");
+  add_tag.call(this, tag, "input[id=bookmark_tag_string_autocomplete]");
 }
 
 // the other tag functionality doesn't seemingly work for collections
 function add_collection(tag) {
+  if (!tag) return;
   let tag_input = $(this).find("[id=bookmark_collection_names_autocomplete]");
   $(tag_input).val(tag);
   tag_input = tag_input[0];
 
   tag_input.dispatchEvent(new KeyboardEvent("keydown", { key: "," }));
+}
+
+function check_for_work_tag(tag) {
+  let href = window.location.href;
+  let work_tags = null;
+  if (!href.match(work_bookmarks_url) && href.match(work_url)) {
+    // console.log("Work page");
+    work_tags = $("#main dl.meta ul.commas");
+  } else if (href.match(series_url)) {
+    // console.log("Series page");
+    work_tags = $("li[role=article] ul.tags");
+  } else if (href.match(bookmark_form_url)) {
+    // console.log("Dedicated bookmark form edit page");
+    work_tags = $("li[role=article] ul.tags");
+  } else {
+    // console.log("Other page");
+
+    const bookmark_article = $(this).closest("li[role=article]");
+    work_tags = $(bookmark_article).find("ul.tags");
+  }
+
+  const work_tag_list = $(work_tags).children();
+
+  const regex = new RegExp(tag);
+  let found_tag = false;
+  $(work_tag_list).each((_index, el) => {
+    const innerText = el.innerText.trim();
+    if (regex.test(innerText)) {
+      found_tag = true;
+      return false;
+    }
+  });
+
+  return found_tag;
 }
 
 function autopopulate_wordcount() {
@@ -134,57 +169,48 @@ function autopopulate_wordcount() {
   // what page is this? can we find the wordcount?
   let href = window.location.href;
   let wordcount = null;
+  let freeform_tags = null;
   let has_podfic_tag = null;
   if (!href.match(work_bookmarks_url) && href.match(work_url)) {
     // Work page, need to look in slightly different place for wordcount
-    console.log("Work page");
-    const freeform_tags = $("#main dd.freeform ul.commas");
-    const podfic_tag = $(freeform_tags).find("li:contains('Podfic')");
-    // TODO: is that needed?
-    let podficced_work_tag = null;
-    for (nonPodficTag of nonPodficTags) {
-      podficced_work_tag = $(freeform_tags).find(
-        `li:contains('${nonPodficTag}')`
-      );
-      if (podficced_work_tag.length) break;
-    }
-    has_podfic_tag = podfic_tag.length && !podficced_work_tag.length;
+    // console.log("Work page");
 
+    freeform_tags = $("#main dd.freeform ul.commas");
     wordcount = $("#main div.wrapper dd.stats dd.words");
   } else if (href.match(series_url)) {
     // Series page, need to look in slightly different place for wordcount
-    // TODO: podfic exclusion
-    console.log("Series page");
+    // console.log("Series page");
 
+    freeform_tags = $("li[role=article] dd.freeform ul.commas");
     wordcount = $("#main div.wrapper dd.stats dd").first();
   } else if (href.match(bookmark_form_url)) {
-    // Dedicated bookmark edit page, wordcount not accessible
-    // TODO: I don't believe this
-    console.log("Dedicated bookmark edit page");
+    // console.log("Dedicated bookmark edit page");
+
+    freeform_tags = $("li[role=article] dd.freeform ul.commas");
+    wordcount = $("dd.stats dd.words");
     return;
   } else {
     // All other pages have the bookmark form nested within a bookmark article
-    console.log("other page");
+    // console.log("other page");
 
     let bookmark_article = $(this).closest("li.bookmark[role=article]");
-    // TODO: consistent code for these
-    let has_podfic_tag = $(bookmark_article).find(
-      "ul.tags > li.freeforms:contains('Podfic')"
-    );
-    let has_podficced_works_tag = $(bookmark_article).find(
-      "ul.tags > li.freeforms:contains('Podfic & Podficced Works')"
-    );
-    if (
-      has_podfic_tag.length ||
-      (has_podficced_works_tag.length && has_podfic_tag.length === 1)
-    )
-      return;
+    freeform_tags = $(bookmark_article).find("dd.freeform ul.commas");
     wordcount = $(bookmark_article).find("dl.stats > dd.words");
     // Series listings have wordcount laid out differently
     if (wordcount.length === 0) {
       wordcount = $(bookmark_article).find("dl.stats > dd").first();
     }
   }
+
+  const podfic_tag = $(freeform_tags).find("li:contains('Podfic')");
+  let podficced_work_tag = null;
+  for (nonPodficTag of nonPodficTags) {
+    podficced_work_tag = $(freeform_tags).find(
+      `li:contains('${nonPodficTag}')`
+    );
+    if (podficced_work_tag.length) break;
+  }
+  has_podfic_tag = podfic_tag.length && !podficced_work_tag.length;
 
   if (has_podfic_tag && exclude_podfic) return;
 
@@ -193,7 +219,7 @@ function autopopulate_wordcount() {
   wordcount = parseInt(wordcount);
 
   let tag = "";
-  for (const [range, tag_str] of Object.entries(wordcount_tags)) {
+  for (const [range, tag_str] of Object.entries(wordcount_tag_buckets)) {
     let [low, high] = range.split("-");
     [low, high] = [parseInt(low), parseInt(high)];
 
@@ -203,7 +229,7 @@ function autopopulate_wordcount() {
     }
   }
 
-  add_tag.call(this, tag, "[id=bookmark_tag_string_autocomplete]");
+  add_bookmark_tag.call(this, tag);
 }
 
 async function autopopulate_presets() {
@@ -229,7 +255,32 @@ async function autopopulate_presets() {
 
     if (tags?.length) {
       for (const tag of tags) {
-        add_tag.call(this, tag, "[id=bookmark_tag_string_autocomplete]");
+        add_bookmark_tag.call(this, tag);
+      }
+    }
+
+    const conditionalTags = preset?.conditionalTags;
+    if (conditionalTags?.length) {
+      console.log({ conditionalTags });
+      for (const conditionalTag of conditionalTags) {
+        const ifTags = conditionalTag.if;
+        let tag_present = false;
+        if (ifTags?.length) {
+          for (const ifTag of ifTags) {
+            tag_present = check_for_work_tag.call(this, ifTag);
+
+            if (tag_present) {
+              const thenTags = conditionalTag.then ?? [];
+              thenTags.forEach((tag) => add_bookmark_tag.call(this, tag));
+              break;
+            }
+          }
+        }
+
+        if (!tag_present) {
+          const elseTags = conditionalTag.else ?? [];
+          elseTags.forEach((tag) => add_bookmark_tag.call(this, tag));
+        }
       }
     }
 
@@ -685,18 +736,24 @@ function getUpdatedPresets() {
     tags = tags.split(",").map((tag) => tag.trim());
 
     let conditionalTags = [];
-    $("div[id^=conditional-tags-preset]").each((_index, wrapper) => {
-      let ifTags = $($(wrapper).find("input[id^=if-tags-preset]")[0]).val();
-      ifTags = ifTags.split(",").map((tag) => tag.trim());
+    $(wrapper)
+      .find("div[id^=conditional-tags-preset]")
+      .each((_index, wrapper) => {
+        let ifTags = $($(wrapper).find("input[id^=if-tags-preset]")[0]).val();
+        ifTags = ifTags.split(",").map((tag) => tag.trim());
 
-      let thenTags = $($(wrapper).find("input[id^=then-tags-preset]")[0]).val();
-      thenTags = thenTags.split(",").map((tag) => tag.trim());
+        let thenTags = $(
+          $(wrapper).find("input[id^=then-tags-preset]")[0]
+        ).val();
+        thenTags = thenTags.split(",").map((tag) => tag.trim());
 
-      let elseTags = $($(wrapper).find("input[id^=else-tags-preset]")[0]).val();
-      elseTags = elseTags.split(",").map((tag) => tag.trim());
+        let elseTags = $(
+          $(wrapper).find("input[id^=else-tags-preset]")[0]
+        ).val();
+        elseTags = elseTags.split(",").map((tag) => tag.trim());
 
-      conditionalTags.push({ if: ifTags, then: thenTags, else: elseTags });
-    });
+        conditionalTags.push({ if: ifTags, then: thenTags, else: elseTags });
+      });
 
     const private = $(
       $(wrapper).find("input[type=checkbox][id^=private-preset]")[0]
