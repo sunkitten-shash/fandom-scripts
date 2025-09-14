@@ -15,7 +15,6 @@
 // TODO: configurable buckets & styling for the wordcount?
 // TODO: adding specific elements to notes? templates?
 // TODO: picking a specific pseud
-// TODO: pull notes & rec from bookmarker
 // TODO: correctly initialize AND/AND NOT in conditional tags, they always reset to "AND" I think
 
 const nonPodficTags = ["Podfic & Podficced Works", "Podfic Available"];
@@ -30,6 +29,10 @@ const chapter_url = /https:\/\/archiveofourown\.org\/chapters\/\d+/;
 const series_url = /https:\/\/archiveofourown\.org\/series\/\d+/;
 const bookmark_form_url =
   /https:\/\/archiveofourown\.org\/bookmarks\/\d+\/edit/;
+const user_bookmarks_url =
+  /https:\/\/archiveofourown\.org\/users\/.*\/bookmarks/;
+const filtered_user_bookmarks_url =
+  /https:\/\/archiveofourown\.org\/bookmarks\?commit=/;
 
 // these are just sample presets
 const defaultPresets = {
@@ -272,6 +275,7 @@ async function autopopulate_presets() {
     await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets))
   );
   for (const key of selectedPresets) {
+    const href = window.location.href;
     const preset = presets[key];
 
     if (key === "Wordcount") {
@@ -284,6 +288,32 @@ async function autopopulate_presets() {
       $(this).find('p.submit input[type="submit"]').val() === "Update";
     if (!onUpdate && is_updating_bookmark) continue;
     const tags = preset?.tags;
+
+    const bookmarkerNotes = presets[key]?.bookmarkerNotes;
+    if (
+      bookmarkerNotes &&
+      (href.match(user_bookmarks_url) ||
+        href.match(filtered_user_bookmarks_url))
+    ) {
+      const bookmark_article = $(this).closest("li[role=article]");
+      const bookmarker_notes = $(bookmark_article).find("blockquote.notes");
+
+      if (bookmarker_notes[0]) {
+        const notes = bookmarker_notes[0].innerText.trim();
+        let username = $(bookmarker_notes)
+          .parent()
+          .find("h5.byline")
+          .find("a")
+          .text();
+        const pseud_regex = /.+\((.+)\)/;
+        const match = username.match(pseud_regex);
+        if (match.length) username = match[1];
+
+        if (notes && username) {
+          $(this).find("textarea").val(`${username}: ${notes}`);
+        }
+      }
+    }
 
     if (tags?.length) {
       for (const tag of tags) {
@@ -493,6 +523,9 @@ function getPresetHTML(presetName, presets) {
       <input type="checkbox" name="on-update-preset-${presetName}" id="on-update-preset-${presetName}" />
       <label for="on-update-preset-${presetName}">Apply on bookmark update</label>
       <br />
+      <input type="checkbox" name="bookmarker-notes-preset-${presetName}" id="bookmarker-notes-preset-${presetName}" />
+      <label for="bookmarker-notes-preset-${presetName}">Include bookmarker's notes</label>
+      <br />
       <input type="checkbox" name="private-preset-${presetName}" id="private-preset-${presetName}" />
       <label for="private-preset-${presetName}">Make bookmark private</label>
       <input type="checkbox" name="rec-preset-${presetName}" id="rec-preset-${presetName}" />
@@ -594,6 +627,16 @@ async function populateSettingsMenuValues() {
     const presetName = updateCheckboxes[i].id.split("-").pop();
     const updateValue = presets[presetName].onUpdate;
     if (updateValue) $(updateCheckboxes[i]).prop("checked", true);
+  }
+
+  const bookmarkerNotesCheckboxes = $(
+    `#bookmark-options-settings input[type=checkbox][id^="bookmarker-notes-preset"]`
+  );
+  for (let i = 0; i < bookmarkerNotesCheckboxes.length; i++) {
+    const presetName = bookmarkerNotesCheckboxes[i].id.split("-").pop();
+    const bookmarkerNotesValue = presets[presetName].bookmarkerNotes;
+    if (bookmarkerNotesValue)
+      $(bookmarkerNotesCheckboxes[i]).prop("checked", true);
   }
 
   const privateCheckboxes = $(
@@ -854,6 +897,9 @@ function getUpdatedPresets() {
     const onUpdate = $(
       $(wrapper).find("input[type=checkbox][id^=on-update-preset]")[0]
     ).is(":checked");
+    const bookmarkerNotes = $(
+      $(wrapper).find("input[type=checkbox][id^=bookmarker-notes-preset]")[0]
+    ).is(":checked");
     const private = $(
       $(wrapper).find("input[type=checkbox][id^=private-preset]")[0]
     ).is(":checked");
@@ -888,6 +934,7 @@ function getUpdatedPresets() {
       tags,
       conditionalTags,
       onUpdate,
+      bookmarkerNotes,
       private,
       rec,
       collections,
