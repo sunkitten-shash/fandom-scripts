@@ -16,6 +16,7 @@
 // TODO: adding specific elements to notes? templates?
 // TODO: picking a specific pseud
 // TODO: pull notes & rec from bookmarker
+// TODO: correctly initialize AND/AND NOT in conditional tags, they always reset to "AND" I think
 
 const nonPodficTags = ["Podfic & Podficced Works", "Podfic Available"];
 
@@ -25,6 +26,7 @@ const num_separators = /[\.,]/;
 const work_bookmarks_url =
   /https:\/\/archiveofourown\.org\/works\/\d+\/bookmarks/;
 const work_url = /https:\/\/archiveofourown\.org\/works\/\d+/;
+const chapter_url = /https:\/\/archiveofourown\.org\/chapters\/\d+/;
 const series_url = /https:\/\/archiveofourown\.org\/series\/\d+/;
 const bookmark_form_url =
   /https:\/\/archiveofourown\.org\/bookmarks\/\d+\/edit/;
@@ -99,14 +101,18 @@ const css = `
 
 function check_for_existing_bookmark_tag(tag) {
   let tag_exists = false;
-  const existing_bookmark_tags = $(this).find("input[id=bookmark_tag_string_autocomplete]")?.parent().parent().find("li.added.tag");
+  const existing_bookmark_tags = $(this)
+    .find("input[id=bookmark_tag_string_autocomplete]")
+    ?.parent()
+    .parent()
+    .find("li.added.tag");
   existing_bookmark_tags.each((_index, element) => {
     const text = element.innerText.split("×")[0].trim();
     if (text === tag) {
       tag_exists = true;
       return false;
     }
-  })
+  });
 
   return tag_exists;
 }
@@ -190,7 +196,10 @@ function autopopulate_wordcount() {
   let wordcount = null;
   let freeform_tags = null;
   let has_podfic_tag = null;
-  if (!href.match(work_bookmarks_url) && href.match(work_url)) {
+  if (
+    !href.match(work_bookmarks_url) &&
+    (href.match(work_url) || href.match(chapter_url))
+  ) {
     // Work page, need to look in slightly different place for wordcount
     // console.log("Work page");
 
@@ -212,7 +221,7 @@ function autopopulate_wordcount() {
     // All other pages have the bookmark form nested within a bookmark article
     // console.log("other page");
 
-    let bookmark_article = $(this).closest("li.bookmark[role=article]");
+    let bookmark_article = $(this).closest("li.blurb[role=article]");
     freeform_tags = $(bookmark_article).find("dd.freeform ul.commas");
     wordcount = $(bookmark_article).find("dl.stats > dd.words");
     // Series listings have wordcount laid out differently
@@ -271,7 +280,8 @@ async function autopopulate_presets() {
     }
 
     const onUpdate = presets[key]?.onUpdate;
-    const is_updating_bookmark = $(this).find('p.submit input[type="submit"]').val() === "Update";
+    const is_updating_bookmark =
+      $(this).find('p.submit input[type="submit"]').val() === "Update";
     if (!onUpdate && is_updating_bookmark) continue;
     const tags = preset?.tags;
 
@@ -303,13 +313,17 @@ async function autopopulate_presets() {
           let and_tag_present = false;
           for (const andTag of andTags) {
             and_tag_present = check_for_work_tag.call(this, andTag);
-            console.log(`${andTag} ${and_tag_present ? 'is' : 'is not'} present w/ condition ${andSelect}`);
+            console.log(
+              `${andTag} ${
+                and_tag_present ? "is" : "is not"
+              } present w/ condition ${andSelect}`
+            );
 
             // if we want both sets of tags to be present, short-circuit if any and tag is found. otherwise continue
             if (andSelect === "AND" && and_tag_present) {
               tags_present = true;
               break;
-            // if we want them to not be present, set the whole thing false immediately
+              // if we want them to not be present, set the whole thing false immediately
             } else if (andSelect === "AND_NOT" && and_tag_present) {
               tags_present = false;
               break;
@@ -425,12 +439,14 @@ function getConditionalTagHTML(conditionalTag, index, presetName) {
     conditionalTag.if ?? []
   ).join(",")}" />
         <select id="select-and-tags-preset-${presetName}-${index}" value="${
-          conditionalTag.andSelect ?? "AND"
-        }">
+    conditionalTag.andSelect ?? "AND"
+  }">
           <option value="AND">AND</option>
           <option value="AND_NOT">AND NOT</option>
         </select>
-        <input type="text" name="and-tags-preset-${presetName}-${index}" id="and-tags-preset-${presetName}-${index}" value="${(conditionalTag.and ?? []).join(",")}" />
+        <input type="text" name="and-tags-preset-${presetName}-${index}" id="and-tags-preset-${presetName}-${index}" value="${(
+    conditionalTag.and ?? []
+  ).join(",")}" />
         <label for="then-tags-preset-${presetName}-${index}">Then add these tags:</label>
         <input type="text" name="then-tags-preset-${presetName}-${index}" id="then-tags-preset-${presetName}-${index}" value="${(
     conditionalTag.then ?? []
@@ -813,9 +829,7 @@ function getUpdatedPresets() {
           $(wrapper).find("select[id^=select-and-tags-preset]")[0]
         ).val();
 
-        let andTags = $(
-          $(wrapper).find("input[id^=and-tags-preset]")[0]
-        ).val();
+        let andTags = $($(wrapper).find("input[id^=and-tags-preset]")[0]).val();
         andTags = andTags.split(",").map((tag) => tag.trim());
 
         let thenTags = $(
@@ -828,7 +842,13 @@ function getUpdatedPresets() {
         ).val();
         elseTags = elseTags.split(",").map((tag) => tag.trim());
 
-        conditionalTags.push({ if: ifTags, andSelect, and: andTags, then: thenTags, else: elseTags });
+        conditionalTags.push({
+          if: ifTags,
+          andSelect,
+          and: andTags,
+          then: thenTags,
+          else: elseTags,
+        });
       });
 
     const onUpdate = $(
