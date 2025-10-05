@@ -41,9 +41,11 @@ const defaultPresets = {
 };
 
 // change these buckets & names as desired
+// note that "Wordcount: 100-1k" will auto-correct to have K capitalized
+// so that one's formatted differently to avoid re-adding it
 const wordcount_tag_buckets = {
   "0-99": "Wordcount: 0-100",
-  "100-999": "Wordcount: 100-1k",
+  "100-999": "Wordcount: 100-1K",
   "1000-4999": "Wordcount: 1k-5k",
   "5000-9999": "Wordcount: 5k-10k",
   "10000-29999": "Wordcount: 10k-30k",
