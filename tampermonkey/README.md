@@ -26,4 +26,6 @@ Configure options and toggle on and off presets in the settings menu found under
 
 Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/bookmark-presets.pub.user.js) to install the script.
 
+Known issues: If the dropdown is set as "AND NOT" for conditional tags, when opening and re-saving settings it will change to "AND", so this manually has to be set whenever you change any settings. If the setting is set to pull in another bookmarker's notes, this will override any custom notes settings. Both of these will be fixed at some point.
+
 COMING SOON: UI that sucks less, better configurable options for when to not autofill wordcount

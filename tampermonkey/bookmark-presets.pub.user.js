@@ -309,7 +309,7 @@ async function autopopulate_presets() {
           .text();
         const pseud_regex = /.+\((.+)\)/;
         const match = username.match(pseud_regex);
-        if (match.length) username = match[1];
+        if (match?.length) username = match[1];
 
         if (notes && username) {
           $(this).find("textarea").val(`${username}: ${notes}`);
