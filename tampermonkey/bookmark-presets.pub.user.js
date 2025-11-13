@@ -17,7 +17,11 @@
 // TODO: picking a specific pseud
 // TODO: correctly initialize AND/AND NOT in conditional tags, they always reset to "AND" I think
 
-const nonPodficTags = ["Podfic & Podficced Works", "Podfic Available"];
+const nonPodficTags = [
+  "Podfic & Podficced Works",
+  "Podfic Available",
+  "Podfic Welcome",
+];
 
 const num_separators = /[\.,]/;
 
