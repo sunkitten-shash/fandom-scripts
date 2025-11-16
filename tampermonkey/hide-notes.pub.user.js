@@ -82,11 +82,6 @@ GM.registerMenuCommand("AO3 Hide Notes Settings", async function () {
     return;
   }
 
-  let hideNotesOption = await GM.getValue("hideNotesOption", "move");
-
-  // TODO: fix how the input goes
-  // TODO: will need to actually correctly intuit when in work, look at force see podfic? that throws errors tho lol
-
   const hide_notes_settings_html = `
     <div id="hide-notes-settings">
         <div id="hide-notes-settings-content">
@@ -126,56 +121,64 @@ async function settings_close() {
   $("#hide-notes-settings").remove();
 }
 
-function moveStartNotes(startNotes) {
-  console.log("moving start notes");
-
-  // TODO: should have id for specific chapters
-  const movedNotes = $(document.createElement("div"));
+function moveNotes(
+  baseElement,
+  startNotesContent,
+  movedNotesIndex,
+  movedNotesHeaderText
+) {
+  const movedNotes = document.createElement("div");
   $(movedNotes).addClass("notes");
   $(movedNotes).addClass("module");
-  $(movedNotes).attr("id", "moved_notes_TEMP");
-  movedNotes.append('<h3 class="heading">Start Notes:</h3>');
-
-  const startNotesContent = $(startNotes).find(".userstuff");
+  $(movedNotes).attr("id", `moved_notes_${movedNotesIndex}`);
+  $(movedNotes).append(`<h3 class="heading">${movedNotesHeaderText}</h3>`);
   $(movedNotes).append(startNotesContent);
 
-  // TODO: this should be a conditional
-  const isChapter = true;
-  const startNotesHeader = $(startNotes).find("h3");
-  const movedNotesNotice = $(document.createElement("p"));
-  movedNotesNotice.html(
-    `(See the end of the ${
-      isChapter ? "chapter" : "work"
-    } for the <a href="#moved_notes_TEMP">moved start notes</a>.)`
-  );
-  startNotesHeader.after(movedNotesNotice);
-
-  const endNotes = $(".end.notes.module")[0];
+  const endNotes = $(baseElement).find(".end.notes.module")[0];
   if (endNotes) {
     const group = $(endNotes).parent();
     $(group).prepend(movedNotes);
     $(endNotes).find("h3.heading").text("End Notes:");
   } else {
-    const workText = $('.userstuff.module[role="article"]');
+    const workText = $(baseElement).find(".userstuff.module[role='article']");
     const movedNotesWrapper = $(document.createElement("div"));
     movedNotesWrapper.addClass("preface");
     movedNotesWrapper.addClass("group");
-    // TODO: add chapter class as well?
     $(movedNotesWrapper).append(movedNotes);
-    console.log({ workText });
     workText.after(movedNotesWrapper);
   }
+}
+
+function moveStartNotes(baseElement, index, isChapter) {
+  console.log("moving start notes");
+
+  let startNotes = $(baseElement)
+    .find(".preface.group .notes.module")
+    .not(".end")[0];
+  if (!startNotes) return;
+  const startNotesContent = $(startNotes).find(".userstuff");
+  if (startNotesContent.length === 0) return;
+
+  const startNotesHeader = $(startNotes).find("h3");
+  const movedNotesNotice = $(document.createElement("p"));
+  movedNotesNotice.html(
+    `(See the end of the ${
+      isChapter ? "chapter" : "work"
+    } for the <a href="#moved_notes_${index}">moved start notes</a>.)`
+  );
+  startNotesHeader.after(movedNotesNotice);
+
+  moveNotes(baseElement, startNotesContent, index, "Start Notes:");
 }
 
 function wrapStartNotes(startNotes) {
   console.log("wrapping start notes");
 
   const wrapper = $("<details>");
-  wrapper.append("<summary>Click to see start notes</summary>");
+  wrapper.append("<summary>Click to see notes</summary>");
   const startNotesContent = $(startNotes).find(".userstuff");
-  console.log({ startNotesContent });
+  if (startNotesContent.length === 0) return;
   wrapper.append(startNotesContent);
-  console.log({ wrapper });
   const startNotesHeader = $(startNotes).find("h3");
   startNotesHeader.after(wrapper);
 }
@@ -184,12 +187,57 @@ async function handleNotes() {
   const hideNotesOption = await GM.getValue("hideNotesOption", "move");
 
   let startNotes = $(".preface.group .notes.module").not(".end")[0];
+  const isFullWork = window.location.href.match(view_full_work_url);
+  let hasMultipleChapters = false;
+  const chapters = $(".work.meta.group dd.chapters")?.[0]?.innerText?.split(
+    "/"
+  );
+  if (chapters.length > 1) {
+    if (parseInt(chapters[1]) > 1) hasMultipleChapters = true;
+  }
+  const isChapter = isFullWork || hasMultipleChapters;
 
   if (!!startNotes) {
     if (hideNotesOption === "move") {
-      moveStartNotes(startNotes);
+      if (isChapter) {
+        const children = $("div#chapters").children();
+        // TODO: better error handling here
+        const chapterNumber = $($("div[id^='chapter-']")[0])
+          .attr("id")
+          .split("-")[1];
+        for (let i = 0; i < children.length; i++) {
+          moveStartNotes(children[i], i + 1, true);
+          // if chapter number is 1 (get chapter number) and/or this is the first of a full work, after moving start notes move work start notes as well
+          if (
+            (isFullWork && i === 0) ||
+            (!isFullWork && chapterNumber === "1")
+          ) {
+            const prevNotes = $(children[i])
+              .parent()
+              .prev()
+              .find(".notes.module")[0];
+            if (!prevNotes) continue;
+            const notesContent = $(prevNotes).find(".userstuff");
+            if (notesContent.length === 0) continue;
+            const notesHeader = $(prevNotes).find("h3");
+            const movedNotesNotice = $(document.createElement("p"));
+            movedNotesNotice.html(
+              `(See the end of the chapter for the <a href="#moved_notes_work">moved start notes</a>.)`
+            );
+            notesHeader.after(movedNotesNotice);
+
+            moveNotes(children[i], notesContent, "work", "Work Start Notes:");
+          }
+        }
+      } else {
+        const baseElement = $("div#workskin");
+        moveStartNotes(baseElement, 1, isChapter);
+      }
     } else if (hideNotesOption === "details") {
-      wrapStartNotes(startNotes);
+      const notesElements = $(".preface.group .notes.module").not(".end");
+      for (let i = 0; i < notesElements.length; i++) {
+        wrapStartNotes(notesElements[i]);
+      }
     }
   }
 }
@@ -204,5 +252,11 @@ $(document).ready(function () {
     head.appendChild(style);
   }
 
-  handleNotes();
+  const href = window.location.href;
+  if (
+    href.match(work_url) ||
+    href.match(chapter_url) ||
+    href.match(collection_work_url)
+  )
+    handleNotes();
 });

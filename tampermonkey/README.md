@@ -29,3 +29,9 @@ Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/
 Known issues: If the dropdown is set as "AND NOT" for conditional tags, when opening and re-saving settings it will change to "AND", so this manually has to be set whenever you change any settings. If the setting is set to pull in another bookmarker's notes, this will override any custom notes settings. Both of these will be fixed at some point.
 
 COMING SOON: UI that sucks less, better configurable options for when to not autofill wordcount
+
+## Hide Start Notes
+
+Hides work/chapter start notes to avoid spoilers. Change the settings to move the notes to the end of the chapter/work, wrap them in a details element so you have to click to expand and see them, or turn off the behavior entirely. Works when viewing a full work or going chapter-by-chapter.
+
+Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/hide-notes.pub.user.js) to install the script.
