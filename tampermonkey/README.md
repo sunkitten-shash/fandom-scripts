@@ -4,15 +4,21 @@
 
 Many thanks to [GodOfLaundryBaskets' See Podfic First script](https://github.com/godoflaundry/fandom-scripts/tree/master/tapermonkey) for inspiring this.
 
-Shows the "Works inspired by this one" section at the top of a work and includes any related works the author has not approved the link to. Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/force-see-podfic.pub.user.js) to install the script.
+Shows the "Works inspired by this one" section at the top of a work and includes podfics the author has not approved the link to. Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/force-see-podfic.pub.user.js) to install the script.
 
-Other notes: Will remove the note about seeing the end of the work for other works inspired by this one, but will keep the link for more notes at the end of the work. In multichapter works, the links to related works will appear at the top of every chapter.
+NOTE: As of Dec 2025, AO3 has updated the Related Works page to only show works that the author has manually approved. This script will now only show approved related works and podfics that can be found through a search (`podfic title: "work title"`), rather than all related works.
+
+Other notes:
+
+- Will remove the note about seeing the end of the work for other works inspired by this one, but will keep the link for more notes at the end of the work
+- In multichapter works, the links to related works will appear at the top of every chapter
+- The script automatically searches AO3 for podfics for which the related work link has not been approved. This behavior can be turned off by changing the value of `SEARCH_FOR_WORKS`, at the top of the script, from `true` to `false`. This might be helpful for works that happen to have a lot of results from that search, or if you would like there to be less background requests happening (for instance, if you are opening a lot of works at once and trying to avoid getting rate-limited).
 
 ## Average Chapter Length
 
 Adds an estimated average chapter length to the stats of each work on a works list. Note that it will show regardless of whether the fic has multiple chapters or not. Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/avg-chapter-len.pub.user.js) to install the script.
 
-(Possible future improvements include actually fetching the wordcount of each chapter for calculations - slightly more accurate but also a lot more resource-intensive.)
+(Possible future improvements include putting a true average on the chapter index page, and actually fetching the wordcount of each chapter for calculations (slightly more accurate but also a lot more resource-intensive).)
 
 ## Bookmark Presets
 
@@ -26,9 +32,14 @@ Configure options and toggle on and off presets in the settings menu found under
 
 Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/bookmark-presets.pub.user.js) to install the script.
 
-Known issues: If the dropdown is set as "AND NOT" for conditional tags, when opening and re-saving settings it will change to "AND", so this manually has to be set whenever you change any settings. If the setting is set to pull in another bookmarker's notes, this will override any custom notes settings. Both of these will be fixed at some point.
+Known issues (fixes planned at some point):
 
-COMING SOON: UI that sucks less, better configurable options for when to not autofill wordcount
+- If the dropdown is set as "AND NOT" for conditional tags, when opening and re-saving settings it will change to "AND", so this manually has to be set whenever you change any settings
+- If the setting is set to pull in another bookmarker's notes, this will override any custom notes settings
+- There's sometimes bugs with new presets showing up after adding them. Saving and re-opening settings or reloading the page should fix things
+- Sometimes not all of the bookmark form loads correctly on pages with lists of works, and some elements will not be autofilled. Reloading the page may help, and it should always work if you open up the work and bookmark from the work page
+
+COMING SOON: UI that sucks less (maybe), better configurable options for when to not autofill wordcount
 
 ## Hide Start Notes
 

@@ -11,11 +11,17 @@
 // @grant        none
 // ==/UserScript==
 
+// Set this value to true to manually search for podfics and false to only use linked related works
+const SEARCH_FOR_WORKS = true;
 const EXTRACT_WORK_ID_REGEX = /https:\/\/archiveofourown\.org\/works\/(\d+)/;
 
-async function addRelatedWorks(relatedWorkElements) {
+function addRelatedWorks(relatedWorkElements) {
+  if (!relatedWorkElements.length) {
+    console.log("No related works to add.");
+    return;
+  }
+
   let jumpParagraph = $("p.jump").first()[0];
-  console.log({ jumpParagraph });
   if (jumpParagraph) {
     const prevElement = jumpParagraph.previousElementSibling;
     // if there are no other notes, remove the "Notes" section entirely; otherwise, only remove the verbiage about inspired works
@@ -41,7 +47,6 @@ async function addRelatedWorks(relatedWorkElements) {
   topSection.append(wrapperDiv);
   wrapperDiv.append('<h3 class="heading">Works inspired by this one:</h3>');
   const wrapperList = $("<ul>");
-  console.log({ relatedWorkElements });
   wrapperList.append(
     relatedWorkElements.map((chunk) => {
       const listElement = $("<li>");
@@ -63,86 +68,70 @@ async function getRelatedWorks() {
   const relatedWorksLink =
     authorLink[0].href.replace(/\/pseuds\/.*/, "") + "/related_works";
 
-  $.get(relatedWorksLink, function (data) {
-    let relatedWorkElements = [];
-    const relatedWorkIds = [];
-    const relatedChunksObj = $(data)
-      .find("dd.parent > a")
-      .filter(function (index) {
-        return $(this).text() === workTitle;
-      });
-    const relatedWorks = Object.keys(relatedChunksObj).reduce((acc, key) => {
-      if (!isNaN(parseInt(key))) {
-        const link =
-          relatedChunksObj[key].parentElement.previousElementSibling.innerHTML;
-        // work link is first element in chunk, extract work id from it
-        const relatedWorkId = $(link)[0].href.match(EXTRACT_WORK_ID_REGEX)[1];
-        relatedWorkIds.push(relatedWorkId);
-        return [...acc, link];
-      } else return acc;
-    }, []);
-    console.log({ relatedWorks });
-    relatedWorkElements = [...relatedWorks];
-    console.log({ relatedWorkElements });
+  // get linked related works
+  const data = await $.get(relatedWorksLink);
+  let relatedWorkElements = [];
+  const relatedWorkIds = [];
+  const relatedChunksObj = $(data)
+    .find("dd.parent > a")
+    .filter(function (index) {
+      return $(this).text() === workTitle;
+    });
+  const relatedWorks = Object.keys(relatedChunksObj).reduce((acc, key) => {
+    if (!isNaN(parseInt(key))) {
+      const link =
+        relatedChunksObj[key].parentElement.previousElementSibling.innerHTML;
+      // work link is first element in chunk, extract work id from it
+      const relatedWorkId = $(link)[0].href.match(EXTRACT_WORK_ID_REGEX)[1];
+      relatedWorkIds.push(relatedWorkId);
+      return [...acc, link];
+    } else return acc;
+  }, []);
+  relatedWorkElements = [...relatedWorks];
 
-    // now search for unlinked works
-    const workId = $.find("#subscription_subscribable_id")[0].value;
-    // TODO: refine this further, refining the search terms should work for being able to eliminate this - causes some errors now sometimes
-    if (workTitle.toLowerCase().includes("podfic"))
-      addRelatedWorks(relatedWorkElements);
+  if (!SEARCH_FOR_WORKS) {
+    addRelatedWorks(relatedWorkElements);
+    return;
+  }
+  // search for unlinked podfics
+  // can't rely on work id being in url so get it from always-present element
+  const workId = $.find("#subscription_subscribable_id")[0].value;
 
-    // TODO: encode properly lmao
-    const searchTerm = `podfic title: "${workTitle}"`;
-    const podficSearchLink = `https://archiveofourown.org/works/search?work_search[query]=${searchTerm
-      .split(" ")
-      .join("+")}`;
-    console.log({ podficSearchLink });
+  // TODO: encode this properly?
+  const searchTerm = `podfic title: "${workTitle}"`;
+  const podficSearchLink = `https://archiveofourown.org/works/search?work_search[query]=${searchTerm
+    .split(" ")
+    .join("+")}`;
 
-    // TODO: temp throw the whole thing in a try/catch?
-    $.get(podficSearchLink, function (data) {
-      // TODO: check if there's nothing lol
-      const works = $(data).find("li[role='article']").toArray();
-      console.log({ works });
-      for (const work of works) {
-        const workLink = $(work).find("h4.heading").find("a")[0]?.href;
-        console.log({ workLink });
-        const id = workLink.match(EXTRACT_WORK_ID_REGEX)[1];
-        // if (relatedWorkIds.includes(id)) {
-        //   console.log("id already found");
-        //   return;
-        // }
+  const searchData = await $.get(podficSearchLink);
+  const searchWorks = $(searchData).find("li[role='article']").toArray();
+  for (const work of searchWorks) {
+    try {
+      const workLink = $(work).find("h4.heading").find("a")[0]?.href;
+      const id = workLink.match(EXTRACT_WORK_ID_REGEX)[1];
+      if (relatedWorkIds.includes(id) || workId === id || !workLink) {
+        continue;
+      } else {
         const relatedElement = $(work).find("h4.heading")[0].innerHTML;
-        // TODO: return early if no work link
-        $.get(workLink, function (workData) {
-          const inspiredBy = $(workData)
-            .find("ul.associations")
-            .find("li:contains('Inspired by')")[0];
-          if (!inspiredBy) return;
-          // TODO: literally any error handling
+        const workData = await $.get(workLink);
+        const inspiredBy = $(workData)
+          .find("ul.associations")
+          .find("li:contains('Inspired by')")[0];
+        if (inspiredBy) {
           const inspiredByWorkId = $(inspiredBy)
             .find("a")[0]
             .href.match(EXTRACT_WORK_ID_REGEX)[1];
-          console.log({ inspiredByWorkId });
           if (inspiredByWorkId === workId) {
-            console.log("found related work!");
-            console.log({ relatedElement });
             relatedWorkElements.push(relatedElement);
           }
-        });
-        // ok putting it outside works so let's. NOT do that,
-        relatedWorkElements.push(relatedElement);
+        }
       }
+    } catch (e) {
+      console.error("Error fetching possible related work:", e);
+    }
+  }
 
-      console.log({ relatedWorkElements });
-
-      if (!relatedWorkElements.length) {
-        console.log("No related works to add.");
-        return;
-      }
-
-      addRelatedWorks(relatedWorkElements);
-    });
-  });
+  addRelatedWorks(relatedWorkElements);
 }
 
 $(document).ready(function () {
