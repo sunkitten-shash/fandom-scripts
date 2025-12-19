@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Force See Podfic
-// @version      2.0
+// @version      2.1
 // @description  Shows all podfics at top of page, linked or not
 // @author       sunkitten_shash
 // @include      http*://archiveofourown.org/*works*
@@ -61,8 +61,6 @@ function addRelatedWorks(relatedWorkElements) {
 
 async function getRelatedWorks() {
   const workTitle = $.find("h2.title.heading")[0].innerText.trim();
-  // TODO: either async it or put everything in consecutive functions haha
-  // hmmm this should also include other things
 
   const authorLink = $.find('a[rel="author"]');
   const relatedWorksLink =
@@ -98,13 +96,57 @@ async function getRelatedWorks() {
   const workId = $.find("#subscription_subscribable_id")[0].value;
 
   // TODO: encode this properly?
+  // search for a podfic that has a title that includes the work title and is *not* tagged with Podfic Available or Podfic Welcome
   const searchTerm = `podfic title: "${workTitle}"`;
   const podficSearchLink = `https://archiveofourown.org/works/search?work_search[query]=${searchTerm
     .split(" ")
-    .join("+")}`;
+    .join(
+      "+"
+    )}&work_search[excluded_tag_names]=Podfic Available,Podfic Welcome`;
 
   const searchData = await $.get(podficSearchLink);
-  const searchWorks = $(searchData).find("li[role='article']").toArray();
+  const searchWorks = $(searchData)
+    .find("li[role='article']")
+    .toArray()
+    // filter out works that:
+    // - don't mention podfic in the summary or title
+    // - link to works in the summary other than this work
+    .filter((work) => {
+      const title = $(work).find("h4.heading").find("a")[0].innerText;
+      console.log({ title });
+      const summaryText = $(work).find("blockquote.summary")[0].innerText;
+      if (
+        !title.toLowerCase().includes("podfic") &&
+        !summaryText.toLowerCase().includes("podfic")
+      ) {
+        console.log(
+          "no mention of podfic in title or summary, probably not a podfic"
+        );
+        return false;
+      }
+
+      // if there's links to works and none of them are to the original work
+      // it can be filtered out
+      const summaryLinks = $(work)
+        .find("blockquote.summary")
+        .find("a")
+        .toArray();
+      const linksToThisWork = summaryLinks.some((link) => {
+        const matches = link.href.match(EXTRACT_WORK_ID_REGEX);
+        if (matches?.length > 1) return workId === matches[1];
+        return false;
+      });
+      if (linksToThisWork) return true;
+
+      const linksToOtherWork = summaryLinks.some((link) => {
+        const matches = link.href.match(EXTRACT_WORK_ID_REGEX);
+        if (matches?.length > 1) return workId !== matches[1];
+        return false;
+      });
+      if (linksToOtherWork) return false;
+
+      return true;
+    });
   for (const work of searchWorks) {
     try {
       const workLink = $(work).find("h4.heading").find("a")[0]?.href;
