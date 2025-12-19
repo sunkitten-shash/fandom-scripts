@@ -47,3 +47,11 @@ COMING SOON: UI that sucks less (maybe), better configurable options for when to
 Hides work/chapter start notes to avoid spoilers. Change the settings to move the notes to the end of the chapter/work, wrap them in a details element so you have to click to expand and see them, or turn off the behavior entirely. Works when viewing a full work or going chapter-by-chapter.
 
 Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/hide-notes.pub.user.js) to install the script.
+
+## Custom Hidden Works List
+
+Pulls from [BrickGrass' BP Highlighter script](https://github.com/BrickGrass/Blanket-Permission-Highlighter) for styling and work minimization code.
+
+Manually specify list of work links in the script and/or click the button added to lists of works to permanently hide them. Works can be unhidden at any time. Change the value of `minimise_articles` at the top of the script to switch between completely removing the works and minimizing them. Go into the settings menu to copy the list of hidden works you've clicked the button on to your keyboard.
+
+Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/custom-hidden-list.pub.user.js) to install the script.
