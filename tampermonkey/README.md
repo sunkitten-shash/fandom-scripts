@@ -35,7 +35,6 @@ Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/
 
 Known issues (fixes planned at some point):
 
-- If the dropdown is set as "AND NOT" for conditional tags, when opening and re-saving settings it will change to "AND", so this manually has to be set whenever you change any settings
 - If the setting is set to pull in another bookmarker's notes, this will override any custom notes settings
 - There's sometimes bugs with new presets showing up after adding them. Saving and re-opening settings or reloading the page should fix things
 - Sometimes not all of the bookmark form loads correctly on pages with lists of works, and some elements will not be autofilled. Reloading the page may help, and it should always work if you open up the work and bookmark from the work page

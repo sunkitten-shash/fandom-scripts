@@ -15,7 +15,6 @@
 // TODO: configurable buckets & styling for the wordcount?
 // TODO: adding specific elements to notes? templates?
 // TODO: picking a specific pseud
-// TODO: correctly initialize AND/AND NOT in conditional tags, they always reset to "AND" I think
 
 const nonPodficTags = [
   "Podfic & Podficced Works",
@@ -243,7 +242,7 @@ function autopopulate_wordcount() {
   let podficced_work_tag = null;
   for (nonPodficTag of nonPodficTags) {
     podficced_work_tag = $(freeform_tags).find(
-      `li:contains('${nonPodficTag}')`
+      `li:contains('${nonPodficTag}')`,
     );
     if (podficced_work_tag.length) break;
   }
@@ -275,10 +274,10 @@ async function autopopulate_presets() {
   }
 
   const selectedPresets = JSON.parse(
-    await GM.getValue("selectedBookmarkPresets", "[]")
+    await GM.getValue("selectedBookmarkPresets", "[]"),
   );
   const presets = JSON.parse(
-    await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets))
+    await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets)),
   );
   for (const key of selectedPresets) {
     const href = window.location.href;
@@ -352,7 +351,7 @@ async function autopopulate_presets() {
             console.log(
               `${andTag} ${
                 and_tag_present ? "is" : "is not"
-              } present w/ condition ${andSelect}`
+              } present w/ condition ${andSelect}`,
             );
 
             // if we want both sets of tags to be present, short-circuit if any and tag is found. otherwise continue
@@ -407,7 +406,7 @@ async function autopopulate_presets() {
     // if bookmarking external work
     if (
       window.location.href.match(
-        /https:\/\/archiveofourown\.org\/external_works/
+        /https:\/\/archiveofourown\.org\/external_works/,
       )
     ) {
       const fandoms = preset?.fandoms;
@@ -416,7 +415,7 @@ async function autopopulate_presets() {
           add_tag.call(
             this,
             fandom,
-            "[id=external_work_fandom_string_autocomplete]"
+            "[id=external_work_fandom_string_autocomplete]",
           );
         }
       }
@@ -427,7 +426,7 @@ async function autopopulate_presets() {
           add_tag.call(
             this,
             relationship,
-            "[id=external_work_relationship_string_autocomplete]"
+            "[id=external_work_relationship_string_autocomplete]",
           );
         }
       }
@@ -438,14 +437,14 @@ async function autopopulate_presets() {
           add_tag.call(
             this,
             character,
-            "[id=external_work_character_string_autocomplete]"
+            "[id=external_work_character_string_autocomplete]",
           );
         }
       }
 
       if (!!preset?.rating) {
         $(
-          `select#external_work_rating_string option:contains('${preset.rating}')`
+          `select#external_work_rating_string option:contains('${preset.rating}')`,
         ).prop("selected", true);
       }
 
@@ -455,7 +454,7 @@ async function autopopulate_presets() {
           const checkbox = $(
             `input[type="checkbox"][id="external_work_category_strings_${category
               .toLowerCase()
-              .replace("/", "")}"]`
+              .replace("/", "")}"]`,
           );
           $(checkbox).prop("checked", true);
         }
@@ -472,25 +471,25 @@ function getConditionalTagHTML(conditionalTag, index, presetName) {
   return `<div id="conditional-tags-preset-${presetName}-${index}">
         <label for="if-tags-preset-${presetName}-${index}">If any of these tags are present:</label>
         <input type="text" name="if-tags-preset-${presetName}-${index}" id="if-tags-preset-${presetName}-${index}" value="${(
-    conditionalTag.if ?? []
-  ).join(",")}" />
+          conditionalTag.if ?? []
+        ).join(",")}" />
         <select id="select-and-tags-preset-${presetName}-${index}" value="${
-    conditionalTag.andSelect ?? "AND"
-  }">
+          conditionalTag.andSelect ?? "AND"
+        }">
           <option value="AND">AND</option>
           <option value="AND_NOT">AND NOT</option>
         </select>
         <input type="text" name="and-tags-preset-${presetName}-${index}" id="and-tags-preset-${presetName}-${index}" value="${(
-    conditionalTag.and ?? []
-  ).join(",")}" />
+          conditionalTag.and ?? []
+        ).join(",")}" />
         <label for="then-tags-preset-${presetName}-${index}">Then add these tags:</label>
         <input type="text" name="then-tags-preset-${presetName}-${index}" id="then-tags-preset-${presetName}-${index}" value="${(
-    conditionalTag.then ?? []
-  ).join(",")}" />
+          conditionalTag.then ?? []
+        ).join(",")}" />
         <label for="else-tags-preset-${presetName}-${index}">Else add these tags:</label>
         <input type="text" name="else-tags-preset-${presetName}-${index}" id="else-tags-preset-${presetName}-${index}" value="${(
-    conditionalTag.else ?? []
-  ).join(",")}" />
+          conditionalTag.else ?? []
+        ).join(",")}" />
         <br />
         <button id="remove-conditional-tag-preset-${presetName}-${index}">Remove</button>
         <br />
@@ -509,8 +508,8 @@ function getPresetHTML(presetName, presets) {
     additionalHTML = `<div style="margin-left:10px;">
         <label for="tags-preset-${presetName}">Tags to add (comma-separated)</label>
         <input type="text" name="tags-preset-${presetName}" id="tags-preset-${presetName}" value="${(
-      presets[presetName].tags ?? []
-    ).join(",")}" />
+          presets[presetName].tags ?? []
+        ).join(",")}" />
       <br />
       <br />
       
@@ -519,7 +518,7 @@ function getPresetHTML(presetName, presets) {
       ${(presets[presetName].conditionalTags ?? []).map(
         (conditionalTag, index) => {
           return getConditionalTagHTML(conditionalTag, index, presetName);
-        }
+        },
       )}
       <button id="add-conditional-tag-preset-${presetName}">Add conditional tags</button>
       </details>
@@ -539,13 +538,13 @@ function getPresetHTML(presetName, presets) {
       <br />
       <label for="collections-preset-${presetName}">Collections to add (comma-separated)</label>
       <input type="text" name="collections-preset-${presetName}" id="collections-preset-${presetName}" value="${(
-      presets[presetName].collections ?? []
-    ).join(",")}" />
+        presets[presetName].collections ?? []
+      ).join(",")}" />
       <br />
       <label for="notes-preset-${presetName}">Notes (HTML allowed)</label>
       <textarea id="notes-preset-${presetName}" name="notes-preset-${presetName}" value="${
-      presets[presetName].notes ?? ``
-    }"></textarea>
+        presets[presetName].notes ?? ``
+      }"></textarea>
 
     <details>
     <summary>External work options</summary>
@@ -580,7 +579,7 @@ function getPresetHTML(presetName, presets) {
           (rating) => `
         <input type="radio" name="rating" id="${rating}" value="${rating}" />
         <label for="${rating}">${rating}</label>  
-      `
+      `,
         )
         .join("")}
     </fieldset>
@@ -592,7 +591,7 @@ function getPresetHTML(presetName, presets) {
           (category) => `
         <input type="checkbox" name="category-${category}" id="category-${category}" />
         <label for="category-${category}">${category}</label/> 
-      `
+      `,
         )
         .join("")}
     </fieldset>
@@ -612,14 +611,14 @@ function getPresetHTML(presetName, presets) {
 
 async function populateSettingsMenuValues() {
   const presets = JSON.parse(
-    await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets))
+    await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets)),
   );
   const selectedPresets = JSON.parse(
-    await GM.getValue("selectedBookmarkPresets", "[]")
+    await GM.getValue("selectedBookmarkPresets", "[]"),
   );
 
   const presetsCheckboxes = $(
-    `#bookmark-options-settings input[type=checkbox][id^="check-preset"]`
+    `#bookmark-options-settings input[type=checkbox][id^="check-preset"]`,
   );
   for (let i = 0; i < presetsCheckboxes.length; i++) {
     const label = presetsCheckboxes[i].labels[0].innerText;
@@ -627,7 +626,7 @@ async function populateSettingsMenuValues() {
   }
 
   const updateCheckboxes = $(
-    `#bookmark-options-settings input[type=checkbox][id^="on-update-preset"]`
+    `#bookmark-options-settings input[type=checkbox][id^="on-update-preset"]`,
   );
   for (let i = 0; i < updateCheckboxes.length; i++) {
     const presetName = updateCheckboxes[i].id.split("-").pop();
@@ -636,7 +635,7 @@ async function populateSettingsMenuValues() {
   }
 
   const bookmarkerNotesCheckboxes = $(
-    `#bookmark-options-settings input[type=checkbox][id^="bookmarker-notes-preset"]`
+    `#bookmark-options-settings input[type=checkbox][id^="bookmarker-notes-preset"]`,
   );
   for (let i = 0; i < bookmarkerNotesCheckboxes.length; i++) {
     const presetName = bookmarkerNotesCheckboxes[i].id.split("-").pop();
@@ -646,7 +645,7 @@ async function populateSettingsMenuValues() {
   }
 
   const privateCheckboxes = $(
-    `#bookmark-options-settings input[type=checkbox][id^="private-preset"]`
+    `#bookmark-options-settings input[type=checkbox][id^="private-preset"]`,
   );
   for (let i = 0; i < privateCheckboxes.length; i++) {
     const presetName = privateCheckboxes[i].id.split("-").pop();
@@ -655,7 +654,7 @@ async function populateSettingsMenuValues() {
   }
 
   const recCheckboxes = $(
-    `#bookmark-options-settings input[type=checkbox][id^="rec-preset"]`
+    `#bookmark-options-settings input[type=checkbox][id^="rec-preset"]`,
   );
   for (let i = 0; i < recCheckboxes.length; i++) {
     const presetName = recCheckboxes[i].id.split("-").pop();
@@ -664,7 +663,7 @@ async function populateSettingsMenuValues() {
   }
 
   const noteFields = $(
-    `#bookmark-options-settings textarea[id^="notes-preset"]`
+    `#bookmark-options-settings textarea[id^="notes-preset"]`,
   );
   for (let i = 0; i < noteFields.length; i++) {
     const presetName = noteFields[i].id.split("-").pop();
@@ -673,21 +672,21 @@ async function populateSettingsMenuValues() {
   }
 
   const ratingFields = $(
-    `#bookmark-options-settings fieldset[id^=rating-preset]`
+    `#bookmark-options-settings fieldset[id^=rating-preset]`,
   );
   for (let i = 0; i < ratingFields.length; i++) {
     const presetName = ratingFields[i].id.split("-").pop();
     const ratingValue = presets[presetName].rating;
     if (ratingValue) {
       const option = $(ratingFields[i]).find(
-        `input[type=radio][id="${ratingValue}"]`
+        `input[type=radio][id="${ratingValue}"]`,
       );
       $(option).prop("checked", true);
     }
   }
 
   const categoriesFields = $(
-    `#bookmark-options-settings fieldset[id^=categories-preset]`
+    `#bookmark-options-settings fieldset[id^=categories-preset]`,
   );
   for (let i = 0; i < categoriesFields.length; i++) {
     const presetName = categoriesFields[i].id.split("-").pop();
@@ -695,12 +694,28 @@ async function populateSettingsMenuValues() {
     if (categories?.length) {
       categories.forEach((category) => {
         const checkbox = $(categoriesFields[i]).find(
-          `input[type=checkbox][id="category-${category}"]`
+          `input[type=checkbox][id="category-${category}"]`,
         );
         $(checkbox).prop("checked", true);
       });
     }
   }
+
+  Object.keys(presets).forEach((presetName) => {
+    console.log({ presetName });
+    const preset = presets[presetName];
+    console.log({ preset });
+
+    preset.conditionalTags?.forEach((conditional, i) => {
+      const element = $(`div[id^="conditional-tags-preset-${presetName}"]`)[i];
+      console.log(element);
+      const andSelect = conditional.andSelect;
+      console.log({ andSelect });
+      $($(element).find("select[id^=select-and-tags-preset]")[0])
+        .val(andSelect)
+        .change();
+    });
+  });
 }
 
 GM.registerMenuCommand(
@@ -713,7 +728,7 @@ GM.registerMenuCommand(
     }
 
     let presets = JSON.parse(
-      await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets))
+      await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets)),
     );
 
     const bookmark_options_settings_html = `
@@ -739,10 +754,10 @@ GM.registerMenuCommand(
     await populateSettingsMenuValues();
 
     const presetsCheckboxes = $(
-      `#bookmark-options-settings input[type=checkbox][id^="check-preset"]`
+      `#bookmark-options-settings input[type=checkbox][id^="check-preset"]`,
     );
     const selectedPresets = JSON.parse(
-      await GM.getValue("selectedBookmarkPresets", "[]")
+      await GM.getValue("selectedBookmarkPresets", "[]"),
     );
     for (let i = 0; i < presetsCheckboxes.length; i++) {
       const label = presetsCheckboxes[i].labels[0].innerText;
@@ -750,7 +765,7 @@ GM.registerMenuCommand(
     }
 
     const privateCheckboxes = $(
-      `#bookmark-options-settings input[type=checkbox][id^="private-preset"]`
+      `#bookmark-options-settings input[type=checkbox][id^="private-preset"]`,
     );
     for (let i = 0; i < privateCheckboxes.length; i++) {
       const presetName = privateCheckboxes[i].id.split("-").pop();
@@ -759,7 +774,7 @@ GM.registerMenuCommand(
     }
 
     const recCheckboxes = $(
-      `#bookmark-options-settings input[type=checkbox][id^="rec-preset"]`
+      `#bookmark-options-settings input[type=checkbox][id^="rec-preset"]`,
     );
     for (let i = 0; i < recCheckboxes.length; i++) {
       const presetName = recCheckboxes[i].id.split("-").pop();
@@ -768,7 +783,7 @@ GM.registerMenuCommand(
     }
 
     const noteFields = $(
-      `#bookmark-options-settings textarea[id^="notes-preset"]`
+      `#bookmark-options-settings textarea[id^="notes-preset"]`,
     );
     for (let i = 0; i < noteFields.length; i++) {
       const presetName = noteFields[i].id.split("-").pop();
@@ -813,7 +828,7 @@ GM.registerMenuCommand(
       const newConditionalTagHTML = getConditionalTagHTML(
         newConditionals[newConditionals.length - 1],
         newConditionals.length - 1,
-        presetName
+        presetName,
       );
       $($(event.target).parent()).prepend(newConditionalTagHTML);
       await GM.setValue("bookmarkPresets", JSON.stringify(presets));
@@ -849,9 +864,9 @@ GM.registerMenuCommand(
     });
 
     $("#bookmark-options-settings-close").click(
-      async () => await settings_close()
+      async () => await settings_close(),
     );
-  }
+  },
 );
 
 function getUpdatedPresets() {
@@ -875,19 +890,19 @@ function getUpdatedPresets() {
         ifTags = ifTags.split(",").map((tag) => tag.trim());
 
         let andSelect = $(
-          $(wrapper).find("select[id^=select-and-tags-preset]")[0]
+          $(wrapper).find("select[id^=select-and-tags-preset]")[0],
         ).val();
 
         let andTags = $($(wrapper).find("input[id^=and-tags-preset]")[0]).val();
         andTags = andTags.split(",").map((tag) => tag.trim());
 
         let thenTags = $(
-          $(wrapper).find("input[id^=then-tags-preset]")[0]
+          $(wrapper).find("input[id^=then-tags-preset]")[0],
         ).val();
         thenTags = thenTags.split(",").map((tag) => tag.trim());
 
         let elseTags = $(
-          $(wrapper).find("input[id^=else-tags-preset]")[0]
+          $(wrapper).find("input[id^=else-tags-preset]")[0],
         ).val();
         elseTags = elseTags.split(",").map((tag) => tag.trim());
 
@@ -901,20 +916,20 @@ function getUpdatedPresets() {
       });
 
     const onUpdate = $(
-      $(wrapper).find("input[type=checkbox][id^=on-update-preset]")[0]
+      $(wrapper).find("input[type=checkbox][id^=on-update-preset]")[0],
     ).is(":checked");
     const bookmarkerNotes = $(
-      $(wrapper).find("input[type=checkbox][id^=bookmarker-notes-preset]")[0]
+      $(wrapper).find("input[type=checkbox][id^=bookmarker-notes-preset]")[0],
     ).is(":checked");
     const private = $(
-      $(wrapper).find("input[type=checkbox][id^=private-preset]")[0]
+      $(wrapper).find("input[type=checkbox][id^=private-preset]")[0],
     ).is(":checked");
     const rec = $(
-      $(wrapper).find("input[type=checkbox][id^=rec-preset]")[0]
+      $(wrapper).find("input[type=checkbox][id^=rec-preset]")[0],
     ).is(":checked");
 
     let collections = $(
-      $(wrapper).find("input[id^=collections-preset]")[0]
+      $(wrapper).find("input[id^=collections-preset]")[0],
     ).val();
     collections = collections.split(",").map((collection) => collection.trim());
     const notes = $($(wrapper).find("textarea[id^=notes-preset]")[0]).val();
@@ -922,7 +937,7 @@ function getUpdatedPresets() {
     let fandoms = $($(wrapper).find("input[id^=fandoms-preset")[0]).val();
     fandoms = fandoms.split(",").map((tag) => tag.trim());
     let relationships = $(
-      $(wrapper).find("input[id^=relationships-preset")[0]
+      $(wrapper).find("input[id^=relationships-preset")[0],
     ).val();
     relationships = relationships.split(",").map((tag) => tag.trim());
     let characters = $($(wrapper).find("input[id^=characters-preset")[0]).val();
@@ -933,7 +948,7 @@ function getUpdatedPresets() {
     $($(wrapper).find(`input[type=checkbox][id^=category]:checked`)).each(
       (_index, element) => {
         categories.push(element.labels[0].textContent);
-      }
+      },
     );
 
     presets[name] = {
@@ -961,7 +976,7 @@ async function settings_close() {
   const newPresets = getUpdatedPresets();
   let enabledPresets = [];
   const presetsCheckboxes = $(
-    `#bookmark-options-settings input[type=checkbox][id^="check-preset"]`
+    `#bookmark-options-settings input[type=checkbox][id^="check-preset"]`,
   );
   for (let i = 0; i < presetsCheckboxes.length; i++) {
     const label = presetsCheckboxes[i].labels[0].innerText;
@@ -989,7 +1004,7 @@ function waitForKeyElements(
                     */,
   iframeSelector /* Optional: If set, identifies the iframe to
                         search.
-                    */
+                    */,
 ) {
   var targetNodes, btargetsFound;
 
@@ -1034,7 +1049,7 @@ function waitForKeyElements(
           selectorTxt,
           actionFunction,
           bWaitOnce,
-          iframeSelector
+          iframeSelector,
         );
       }, 300);
       controlObj[controlKey] = timeControl;
@@ -1047,7 +1062,7 @@ function waitForKeyElements(
 waitForKeyElements(
   "[id='bookmark-form']",
   set_context,
-  false /*false = continue searching after first*/
+  false /*false = continue searching after first*/,
 );
 
 $(document).ready(function () {
