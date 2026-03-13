@@ -59,7 +59,7 @@ const addSeriesInfo = (bookmarkArticle) => {
 
   const { seriesTitle, seriesId, seriesSummary } = seriesInfo;
 
-  const notesField = $("textarea[id^=bookmark_notes]");
+  const notesField = $(bookmarkArticle).find("textarea[id^=bookmark_notes]");
   const existingNotes = $(notesField).val();
   if (existingNotes.includes("Series Details")) {
     console.log("Already has series details, returning");
