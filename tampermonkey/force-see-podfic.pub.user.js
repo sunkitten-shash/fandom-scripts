@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Force See Podfic
-// @version      2.1
+// @version      2.2
 // @description  Shows all podfics at top of page, linked or not
 // @author       sunkitten_shash
-// @include      http*://archiveofourown.org/*works*
-// @include      http*://archiveofourown.org/chapters*
+// @include      /https:\/\/archiveofourown\.org\/works\/\d+/
+// @include      /https:\/\/archiveofourown\.org\/chapters\/\d+/
 // @require      http://code.jquery.com/jquery-3.5.1.min.js
 // @updateURL    https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/force-see-podfic.pub.user.js
 // @downloadURL  https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/force-see-podfic.pub.user.js
@@ -29,7 +29,7 @@ function addRelatedWorks(relatedWorkElements) {
       if (jumpParagraph.innerText.includes("more notes"))
         jumpParagraph.innerHTML = jumpParagraph.innerHTML.replace(
           / and <a href=".*">other works inspired by this one<\/a>/,
-          ""
+          "",
         );
       else jumpParagraph.remove();
     } else {
@@ -52,7 +52,7 @@ function addRelatedWorks(relatedWorkElements) {
       const listElement = $("<li>");
       listElement.append(chunk);
       return listElement;
-    })
+    }),
   );
   wrapperDiv.append(wrapperList);
 
@@ -101,7 +101,7 @@ async function getRelatedWorks() {
   const podficSearchLink = `https://archiveofourown.org/works/search?work_search[query]=${searchTerm
     .split(" ")
     .join(
-      "+"
+      "+",
     )}&work_search[excluded_tag_names]=Podfic Available,Podfic Welcome`;
 
   const searchData = await $.get(podficSearchLink);
@@ -120,7 +120,7 @@ async function getRelatedWorks() {
         !summaryText.toLowerCase().includes("podfic")
       ) {
         console.log(
-          "no mention of podfic in title or summary, probably not a podfic"
+          "no mention of podfic in title or summary, probably not a podfic",
         );
         return false;
       }
