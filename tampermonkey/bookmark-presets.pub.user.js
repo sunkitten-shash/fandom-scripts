@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         AO3 Automatic Bookmark Options
-// @version      1.4
+// @version      1.5
 // @description  Automatically add preset options to AO3 bookmarks
 // @author       sunkitten_shash
 // @include      https://archiveofourown.org/*
@@ -16,6 +16,8 @@
 // TODO: adding specific elements to notes? templates?
 // TODO: picking a specific pseud
 
+// true to not put wordcount tags on podfics, false to put them on
+const EXCLUDE_PODFIC = true;
 const nonPodficTags = [
   "Podfic & Podficced Works",
   "Podfic Available",
@@ -107,16 +109,20 @@ const css = `
         }
     }`;
 
-function check_for_existing_bookmark_tag(tag) {
-  let tag_exists = false;
+function get_existing_bookmark_tags() {
   const existing_bookmark_tags = $(this)
     .find("input[id=bookmark_tag_string_autocomplete]")
     ?.parent()
     .parent()
     .find("li.added.tag");
+  return existing_bookmark_tags;
+}
+
+function check_for_existing_bookmark_tag(existing_bookmark_tags, tag) {
+  let tag_exists = false;
   existing_bookmark_tags.each((_index, element) => {
     const text = element.innerText.split("×")[0].trim();
-    if (text === tag) {
+    if (text.toLowerCase() === tag.toLowerCase()) {
       tag_exists = true;
       return false;
     }
@@ -125,41 +131,60 @@ function check_for_existing_bookmark_tag(tag) {
   return tag_exists;
 }
 
-function add_tag(tag, selector) {
-  let tag_input = $(this).find(selector);
-  if (!tag_input[0]) {
-    console.log("Can't find tag input field, returning");
-    return;
-  }
-  tag_input = tag_input[0]; // get actual DOM node
-
-  // adding tag spoofing from: https://github.com/LazyCats-dev/ao3-podfic-posting-helper/blob/main/src/inject.js
-  const event = new InputEvent("input", { bubbles: true, data: tag });
-  tag_input.value = tag;
-  // Replicates the value changing.
-  tag_input.dispatchEvent(event);
-  // Replicates the user hitting comma.
-  tag_input.dispatchEvent(new KeyboardEvent("keydown", { key: "," }));
+function add_tags(tags, selector) {
+  console.log(`waiting for tag input for tags ${tags}`);
+  waitForKeyElements(
+    selector,
+    (j_node) => {
+      const tag_input = $(j_node)[0];
+      for (const tag of tags) {
+        // adding tag spoofing from: https://github.com/LazyCats-dev/ao3-podfic-posting-helper/blob/main/src/inject.js
+        const event = new InputEvent("input", { bubbles: true, data: tag });
+        tag_input.value = tag;
+        // Replicates the value changing.
+        tag_input.dispatchEvent(event);
+        // Replicates the user hitting comma.
+        tag_input.dispatchEvent(new KeyboardEvent("keydown", { key: "," }));
+      }
+    },
+    true,
+    this,
+  );
 }
 
-function add_bookmark_tag(tag) {
-  if (check_for_existing_bookmark_tag.call(this, tag)) return;
-
-  add_tag.call(this, tag, "input[id=bookmark_tag_string_autocomplete]");
+function add_bookmark_tags(tags) {
+  const bookmark_tags = get_existing_bookmark_tags.call(this);
+  const tags_to_add = tags.filter(
+    (tag) => !check_for_existing_bookmark_tag.call(this, bookmark_tags, tag),
+  );
+  add_tags.call(
+    this,
+    tags_to_add,
+    "input[id=bookmark_tag_string_autocomplete]",
+  );
 }
 
 // the other tag functionality doesn't seemingly work for collections
-function add_collection(tag) {
-  if (!tag) return;
-  let tag_input = $(this).find("[id=bookmark_collection_names_autocomplete]");
-  $(tag_input).val(tag);
-  tag_input = tag_input[0];
+function add_collections(collections) {
+  waitForKeyElements(
+    "[id=bookmark_collection_names_autocomplete]",
+    (j_node) => {
+      let tag_input = j_node;
+      for (const collection of collections) {
+        tag_input = j_node;
+        $(tag_input).val(collection);
+        tag_input = tag_input[0];
 
-  tag_input.dispatchEvent(new KeyboardEvent("keydown", { key: "," }));
+        tag_input.dispatchEvent(new KeyboardEvent("keydown"), { key: "," });
+      }
+    },
+    true,
+    this,
+  );
 }
 
-function check_for_work_tag(tag) {
-  let href = window.location.href;
+function get_work_tags() {
+  const href = window.location.href;
   let work_tags = null;
   if (!href.match(work_bookmarks_url) && href.match(work_url)) {
     // console.log("Work page");
@@ -179,9 +204,13 @@ function check_for_work_tag(tag) {
 
   const work_tag_list = $(work_tags).children();
 
+  return work_tag_list;
+}
+
+function check_for_work_tag(work_tags, tag) {
   const regex = new RegExp(tag);
   let found_tag = false;
-  $(work_tag_list).each((_index, el) => {
+  $(work_tags).each((_index, el) => {
     const innerText = el.innerText.trim();
     if (regex.test(innerText)) {
       found_tag = true;
@@ -192,14 +221,7 @@ function check_for_work_tag(tag) {
   return found_tag;
 }
 
-function autopopulate_wordcount() {
-  const exclude_podfic = true;
-
-  let dds = $(this).find("fieldset > fieldset > dl > dd");
-  let tag_dd = dds[1];
-  let tag_list = $(tag_dd).children("ul");
-
-  // what page is this? can we find the wordcount?
+function get_wordcount_tag() {
   let href = window.location.href;
   let wordcount = null;
   let freeform_tags = null;
@@ -248,7 +270,7 @@ function autopopulate_wordcount() {
   }
   has_podfic_tag = podfic_tag.length && !podficced_work_tag.length;
 
-  if (has_podfic_tag && exclude_podfic) return;
+  if (has_podfic_tag && EXCLUDE_PODFIC) return;
 
   wordcount = wordcount.text();
   wordcount = wordcount.replace(num_separators, "");
@@ -265,7 +287,58 @@ function autopopulate_wordcount() {
     }
   }
 
-  add_bookmark_tag.call(this, tag);
+  return tag;
+}
+
+function autopopulate_external_work_info(presets) {
+  const fandoms = presets.flatMap((preset) => preset.fandoms ?? []);
+  if (fandoms.length) {
+    wait_for_tag_input.call(
+      this,
+      fandoms,
+      "[id=external_work_fandom_string_autocomplete]",
+    );
+  }
+
+  const relationships = presets.flatMap((preset) => preset.relationships ?? []);
+  if (relationships.length) {
+    wait_for_tag_input.call(
+      this,
+      relationships,
+      "[id=external_work_relationship_string_autocomplete]",
+    );
+  }
+
+  const characters = presets.flatMap((preset) => preset.characters ?? []);
+  if (characters.length) {
+    wait_for_tag_input.call(
+      this,
+      characters,
+      "[id=external_work_character_string_autocomplete]",
+    );
+  }
+
+  const ratingList = presets.map((preset) => preset.rating).filter(Boolean);
+  const rating = ratingList.length ? ratingList[0] : null;
+  if (rating) {
+    $(
+      `select#external_work_rating_string option:contains('${preset.rating}')`,
+    ).prop("selected", true);
+  }
+
+  const categories = Array.from(
+    new Set(presets.flatMap((preset) => preset.categories ?? [])),
+  );
+  if (categories.length) {
+    for (const category of categories) {
+      const checkbox = $(
+        `input[type="checkbox"][id="external_work_category_strings_${category
+          .toLowerCase()
+          .replace("/", "")}"]`,
+      );
+      $(checkbox).prop("checked", true);
+    }
+  }
 }
 
 async function autopopulate_presets() {
@@ -279,62 +352,28 @@ async function autopopulate_presets() {
   const presets = JSON.parse(
     await GM.getValue("bookmarkPresets", JSON.stringify(defaultPresets)),
   );
-  for (const key of selectedPresets) {
-    const href = window.location.href;
-    const preset = presets[key];
 
-    if (key === "Wordcount") {
-      autopopulate_wordcount.call(this);
-      continue;
-    }
+  if (!selectedPresets.length) return;
 
-    const onUpdate = presets[key]?.onUpdate;
-    const is_updating_bookmark =
-      $(this).find('p.submit input[type="submit"]').val() === "Update";
-    if (!onUpdate && is_updating_bookmark) continue;
-    const tags = preset?.tags;
+  const work_tags = get_work_tags.call(this);
 
-    const bookmarkerNotes = presets[key]?.bookmarkerNotes;
-    if (
-      bookmarkerNotes &&
-      (href.match(user_bookmarks_url) ||
-        href.match(filtered_user_bookmarks_url))
-    ) {
-      const bookmark_article = $(this).closest("li[role=article]");
-      const bookmarker_notes = $(bookmark_article).find("blockquote.notes");
+  const is_updating_bookmark =
+    $(this).find('p.submit input[type="submit"]').val() === "Update";
+  const currentPresets = selectedPresets
+    .map((key) => presets[key])
+    .filter(Boolean)
+    .filter((preset) => !is_updating_bookmark || preset.onUpdate);
 
-      if (bookmarker_notes[0]) {
-        const notes = bookmarker_notes[0].innerText.trim();
-        let username = $(bookmarker_notes)
-          .parent()
-          .find("h5.byline")
-          .find("a")
-          .text();
-        const pseud_regex = /.+\((.+)\)/;
-        const match = username.match(pseud_regex);
-        if (match?.length) username = match[1];
+  let bookmarkTags = currentPresets.flatMap((preset) => {
+    const simpleTags = (preset.tags ?? []).filter(Boolean);
 
-        if (notes && username) {
-          $(this).find("textarea").val(`${username}: ${notes}`);
-        }
-      }
-    }
-
-    if (tags?.length) {
-      for (const tag of tags) {
-        add_bookmark_tag.call(this, tag);
-      }
-    }
-
-    const conditionalTags = preset?.conditionalTags;
-    if (conditionalTags?.length) {
-      console.log({ conditionalTags });
-      for (const conditionalTag of conditionalTags) {
-        const ifTags = conditionalTag.if;
+    const conditionalTags = (preset.conditionalTags ?? [])
+      .reduce((tagList, conditional) => {
+        const if_tags = conditional.if;
         let tags_present = false;
-        if (ifTags?.length) {
-          for (const ifTag of ifTags) {
-            tags_present = check_for_work_tag.call(this, ifTag);
+        if (if_tags?.length) {
+          for (const tag of if_tags) {
+            tags_present = check_for_work_tag.call(this, work_tags, tag);
 
             if (tags_present) {
               break;
@@ -342,124 +381,127 @@ async function autopopulate_presets() {
           }
         }
 
-        const andTags = conditionalTag.and;
-        const andSelect = conditionalTag.andSelect;
-        if (tags_present && andTags?.length) {
-          let and_tag_present = false;
-          for (const andTag of andTags) {
-            and_tag_present = check_for_work_tag.call(this, andTag);
+        const and_tags = conditional.and;
+        const and_select = conditional.andSelect;
+
+        if (tags_present && and_tags?.length) {
+          let and_tags_present = false;
+          for (const tag of and_tags) {
+            and_tags_present = check_for_work_tag.call(this, work_tags, tag);
             console.log(
-              `${andTag} ${
-                and_tag_present ? "is" : "is not"
-              } present w/ condition ${andSelect}`,
+              `${tag} ${
+                and_tags_present ? "is" : "is not"
+              } present w/ condition ${and_select}`,
             );
 
             // if we want both sets of tags to be present, short-circuit if any and tag is found. otherwise continue
-            if (andSelect === "AND" && and_tag_present) {
+            if (and_select === "AND" && and_tags_present) {
               tags_present = true;
               break;
               // if we want them to not be present, set the whole thing false immediately
-            } else if (andSelect === "AND_NOT" && and_tag_present) {
+            } else if (and_select === "AND_NOT" && and_tags_present) {
               tags_present = false;
               break;
             }
-          }
 
-          // if and tags were never found, set tags_present to false
-          if (!and_tag_present && andSelect === "AND") {
-            tags_present = false;
+            // if and tags were never found and are needed, set tags_present to false
+            if (!and_tags_present && and_select === "AND") {
+              tags_present = false;
+            }
           }
         }
 
         if (tags_present) {
-          const thenTags = conditionalTag.then ?? [];
-          thenTags.forEach((tag) => add_bookmark_tag.call(this, tag));
+          return [...tagList, ...(conditional.then ?? [])];
         } else {
-          const elseTags = conditionalTag.else ?? [];
-          elseTags.forEach((tag) => add_bookmark_tag.call(this, tag));
+          return [...tagList, ...(conditional.else ?? [])];
         }
-      }
-    }
+      }, [])
+      .filter(Boolean);
 
-    if (preset?.private) {
-      if (!$("input#bookmark_private").is(":checked"))
-        $("input#bookmark_private").trigger("click");
-    }
+    return [...simpleTags, ...conditionalTags];
+  });
+  if (selectedPresets.includes("Wordcount")) {
+    bookmarkTags.push(get_wordcount_tag.call(this));
+  }
+  bookmarkTags = Array.from(new Set(bookmarkTags));
+  console.log({ bookmarkTags });
+  add_bookmark_tags.call(this, bookmarkTags);
 
-    if (preset?.rec) {
-      if (!$("input#bookmark_rec").is(":checked"))
-        $("input#bookmark_rec").trigger("click");
-    }
+  const collections = currentPresets.flatMap(
+    (preset) => preset.collections ?? [],
+  );
+  add_collections.call(this, collections);
 
-    const collections = preset?.collections;
-
-    if (collections?.length) {
-      for (const collection of collections) {
-        add_collection.call(this, collection);
-      }
-    }
-
-    if (!!preset?.notes) {
-      $("textarea#bookmark_notes").val(preset.notes);
-    }
-
-    // if bookmarking external work
-    if (
-      window.location.href.match(
-        /https:\/\/archiveofourown\.org\/external_works/,
-      )
-    ) {
-      const fandoms = preset?.fandoms;
-      if (fandoms?.length) {
-        for (const fandom of fandoms) {
-          add_tag.call(
-            this,
-            fandom,
-            "[id=external_work_fandom_string_autocomplete]",
-          );
+  const is_private = currentPresets.some((preset) => preset.private);
+  if (is_private)
+    waitForKeyElements(
+      "input#bookmark_private",
+      (j_node) => {
+        if (!$(j_node).is(":checked")) {
+          $(j_node).trigger("click");
         }
-      }
+      },
+      true,
+      this,
+    );
 
-      const relationships = preset?.relationships;
-      if (relationships?.length) {
-        for (const relationship of relationships) {
-          add_tag.call(
-            this,
-            relationship,
-            "[id=external_work_relationship_string_autocomplete]",
-          );
+  const rec = currentPresets.some((preset) => preset.rec);
+  if (rec)
+    waitForKeyElements(
+      "input#bookmark_rec",
+      (j_node) => {
+        if (!$(j_node).is(":checked")) {
+          $(j_node).trigger("click");
         }
-      }
+      },
+      true,
+      this,
+    );
 
-      const characters = preset?.characters;
-      if (characters?.length) {
-        for (const character of characters) {
-          add_tag.call(
-            this,
-            character,
-            "[id=external_work_character_string_autocomplete]",
-          );
-        }
-      }
+  const preset_notes = currentPresets
+    .map((preset) => (preset.notes ? preset.notes : null))
+    .filter(Boolean)
+    .join("\n\n");
+  const include_bookmarker_notes = currentPresets.some(
+    (preset) => preset.bookmarkerNotes,
+  );
+  let bookmarker_notes = "";
+  const href = window.location.href;
+  if (
+    include_bookmarker_notes &&
+    (href.match(user_bookmarks_url) || href.match(filtered_user_bookmarks_url))
+  ) {
+    const userName = $("#greeting > .user > .dropdown > .dropdown-toggle")
+      .attr("href")
+      .split("/")[2];
 
-      if (!!preset?.rating) {
-        $(
-          `select#external_work_rating_string option:contains('${preset.rating}')`,
-        ).prop("selected", true);
-      }
+    const bookmark_article = $(this).closest("li[role=article]");
+    const bookmarker_notes = $(bookmark_article).find("blockquote.notes");
 
-      const categories = preset?.categories;
-      if (categories?.length) {
-        for (const category of categories) {
-          const checkbox = $(
-            `input[type="checkbox"][id="external_work_category_strings_${category
-              .toLowerCase()
-              .replace("/", "")}"]`,
-          );
-          $(checkbox).prop("checked", true);
-        }
+    if (bookmarker_notes[0]) {
+      const notes = bookmarker_notes[0].innerText.trim();
+      let username = $(bookmarker_notes)
+        .parent()
+        .find("h5.byline")
+        .find("a")
+        .text();
+      const pseud_regex = /.+\((.+)\)/;
+      const match = username.match(pseud_regex);
+      if (match?.length) username = match[1];
+
+      if (notes && username && username !== userName) {
+        bookmarker_notes = `${username}: ${notes}`;
       }
     }
+  }
+  const notes = `${preset_notes}${!!preset_notes && !!bookmarker_notes ? "\n\n" : ""}${bookmarker_notes}`;
+  if (!!notes) {
+    $("textarea#bookmark_notes").val(notes);
+  }
+
+  if (href.match(/https:\/\/archiveofourown\.org\/external_works/)) {
+    autopopulate_external_work_info.call(this, currentPresets);
   }
 }
 
@@ -1075,4 +1117,3 @@ $(document).ready(function () {
     head.appendChild(style);
   }
 });
-// });
