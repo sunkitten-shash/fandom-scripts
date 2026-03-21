@@ -477,7 +477,7 @@ async function autopopulate_presets() {
       .split("/")[2];
 
     const bookmark_article = $(this).closest("li[role=article]");
-    const bookmarker_notes = $(bookmark_article).find("blockquote.notes");
+    bookmarker_notes = $(bookmark_article).find("blockquote.notes");
 
     if (bookmarker_notes[0]) {
       const notes = bookmarker_notes[0].innerText.trim();
@@ -497,7 +497,7 @@ async function autopopulate_presets() {
   }
   const notes = `${preset_notes}${!!preset_notes && !!bookmarker_notes ? "\n\n" : ""}${bookmarker_notes}`;
   if (!!notes) {
-    $("textarea#bookmark_notes").val(notes);
+    $("textarea[id^=bookmark_notes]").val(notes);
   }
 
   if (href.match(/https:\/\/archiveofourown\.org\/external_works/)) {
