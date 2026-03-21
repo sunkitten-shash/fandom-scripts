@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         AO3 Automatic Bookmark Options
-// @version      1.5
+// @version      1.6
 // @description  Automatically add preset options to AO3 bookmarks
 // @author       sunkitten_shash
 // @include      https://archiveofourown.org/*
@@ -477,11 +477,12 @@ async function autopopulate_presets() {
       .split("/")[2];
 
     const bookmark_article = $(this).closest("li[role=article]");
-    bookmarker_notes = $(bookmark_article).find("blockquote.notes");
+    const bookmarker_notes_section =
+      $(bookmark_article).find("blockquote.notes");
 
-    if (bookmarker_notes[0]) {
-      const notes = bookmarker_notes[0].innerText.trim();
-      let username = $(bookmarker_notes)
+    if (bookmarker_notes_section[0]) {
+      const notes = bookmarker_notes_section[0].innerText.trim();
+      let username = $(bookmarker_notes_section)
         .parent()
         .find("h5.byline")
         .find("a")
