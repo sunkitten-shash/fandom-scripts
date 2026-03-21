@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Bookmark Series Info
-// @version      1.0
+// @version      1.1
 // @description  Adds series info only to bookmarks
 // @author       sunkitten_shash
 // @include      https://archiveofourown.org/*
@@ -32,9 +32,9 @@ const getSeriesInfoFromOtherPage = (article) => {
     .find("h4.heading")[0]
     .innerHTML.split("<img")[0]
     .trim();
-  const seriesId = $(article)
-    .find("h4.heading a")[0]
-    .href.match(SERIES_ID_REGEX)[1];
+  const match = $(article).find("h4.heading a")[0].href.match(SERIES_ID_REGEX);
+  if (!match) return null;
+  const seriesId = match[1];
   const seriesSummary = $(article)
     .find("blockquote.userstuff.summary")[0]
     ?.innerHTML?.trim();
@@ -56,6 +56,8 @@ const addSeriesInfo = (bookmarkArticle) => {
       $(bookmarkArticle).closest("li[role=article]"),
     );
   }
+
+  if (!seriesInfo) return;
 
   const { seriesTitle, seriesId, seriesSummary } = seriesInfo;
 
