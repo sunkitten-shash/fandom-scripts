@@ -459,7 +459,7 @@ async function autopopulate_presets() {
       this,
     );
 
-  const preset_notes = currentPresets
+  let preset_notes = currentPresets
     .map((preset) => (preset.notes ? preset.notes : null))
     .filter(Boolean)
     .join("\n\n");
@@ -496,9 +496,22 @@ async function autopopulate_presets() {
       }
     }
   }
-  const notes = `${preset_notes}${!!preset_notes && !!bookmarker_notes ? "\n\n" : ""}${bookmarker_notes}`;
-  if (!!notes) {
-    $("textarea[id^=bookmark_notes]").val(notes);
+  const bookmarkNotesArea = $(this).find("textarea[id^=bookmark_notes");
+  console.log({ bookmarkNotesArea });
+  const existingBookmarkNotes = $(bookmarkNotesArea).val();
+  if (!!existingBookmarkNotes) {
+    preset_notes = existingBookmarkNotes.includes(preset_notes)
+      ? ""
+      : preset_notes;
+    bookmarker_notes = existingBookmarkNotes.includes(bookmarker_notes)
+      ? ""
+      : bookmarker_notes;
+  }
+  const newNotes = `${preset_notes}${!!preset_notes && !!bookmarker_notes ? "\n\n" : ""}${bookmarker_notes}`;
+  if (!!newNotes) {
+    $(bookmarkNotesArea).val(
+      `${!!existingBookmarkNotes ? `${existingBookmarkNotes}\n\n` : ""}${newNotes}`,
+    );
   }
 
   if (href.match(/https:\/\/archiveofourown\.org\/external_works/)) {

@@ -12,12 +12,14 @@ Other notes:
 
 - Will remove the note about seeing the end of the work for other works inspired by this one, but will keep the link for more notes at the end of the work
 - In multichapter works, the links to related works will appear at the top of every chapter
-- The script automatically searches AO3 for podfics for which the related work link has not been approved. This behavior can be turned off by changing the value of `SEARCH_FOR_WORKS`, at the top of the script, from `true` to `false`. This might be helpful for works that happen to have a lot of results from that search, or if you would like there to be less background requests happening (for instance, if you are opening a lot of works at once and trying to avoid getting rate-limited).
+- The script automatically searches AO3 for podfics for which the related work link has not been approved. This behavior can be turned off by changing the value of `SEARCH_FOR_WORKS`, at the top of the script, from `true` to `false`. This might be helpful for works that happen to have a lot of results from that search, if you don't want extra works possibly appearing in your history, or if you would like there to be less background requests happening (for instance, if you are opening a lot of works at once and trying to avoid getting rate-limited).
   - It excludes works that don't mention podfics in the title or summary, or that link to other AO3 works but not this one.
 
 ## Average Chapter Length
 
 Adds an estimated average chapter length to the stats of each work on a works list. Note that it will show regardless of whether the fic has multiple chapters or not. Click on [this link](https://github.com/sunkitten-shash/fandom-scripts/raw/main/tampermonkey/avg-chapter-len.pub.user.js) to install the script.
+
+Note that the average chapter length is calculated by dividing the wordcount by the number of chapters - it may be somewhat misleading if chapters differ greatly in length.
 
 (Possible future improvements include putting a true average on the chapter index page, and actually fetching the wordcount of each chapter for calculations (slightly more accurate but also a lot more resource-intensive).)
 
